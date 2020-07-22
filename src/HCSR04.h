@@ -12,7 +12,9 @@ class HCSR04Sensor {
 	public:
 		HCSR04Sensor();
 		
+		void begin(int triggerPin, int echoPin);
 		void begin(int triggerPin, int* echoPin);
+		void begin(int triggerPin, int echoPin, int timeout, bool unlock);
 		void begin(int triggerPin, int* echoPin, int timeout, bool unlock);
 		
 		long* measureMicroseconds();

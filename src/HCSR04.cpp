@@ -8,15 +8,16 @@
 
 HCSR04Sensor::HCSR04Sensor() {}
 
+void HCSR04Sensor::begin(int triggerPin, int echoPin) {
+	begin(triggerPin, new int[1] { echoPin });
+}
+
 void HCSR04Sensor::begin(int triggerPin, int* echoPins) {
-	this->triggerPin = triggerPin;
-	this->echoPins = echoPins;
-	this->timeout = 100000;
-	this->unlock = false;
-	
-	size_t size = sizeof(echoPins)/sizeof(echoPins[0]);
-	this->triggerTimes = new unsigned long[size];
-	this->echoTimes = new unsigned long[size];
+	begin(triggerPin, echoPins, 100000, false);
+}
+
+void HCSR04Sensor::begin(int triggerPin, int echoPin, int timeout, bool unlock) {
+	begin(triggerPin, new int[1] { echoPin }, timeout, unlock);
 }
 
 void HCSR04Sensor::begin(int triggerPin, int* echoPins, int timeout, bool unlock) {
