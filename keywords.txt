@@ -1,0 +1,3 @@
+HCSR04	KEYWORD1
+measureDistanceMm	KEYWORD2
+measureDistanceCm	KEYWORD3
