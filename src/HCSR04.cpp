@@ -9,37 +9,36 @@
 HCSR04Sensor::HCSR04Sensor() {}
 
 void HCSR04Sensor::begin(int triggerPin, int echoPin) {
-	begin(triggerPin, new int[1] { echoPin });
+	begin(triggerPin, new int[1] { echoPin }, 1);
 }
 
-void HCSR04Sensor::begin(int triggerPin, int* echoPins) {
-	begin(triggerPin, echoPins, 100000, false);
+void HCSR04Sensor::begin(int triggerPin, int* echoPins, short echoCount) {
+	begin(triggerPin, echoPins, echoCount, 100000, false);
 }
 
 void HCSR04Sensor::begin(int triggerPin, int echoPin, int timeout, bool unlock) {
-	begin(triggerPin, new int[1] { echoPin }, timeout, unlock);
+	begin(triggerPin, new int[1] { echoPin }, 1, timeout, unlock);
 }
 
-void HCSR04Sensor::begin(int triggerPin, int* echoPins, int timeout, bool unlock) {
+void HCSR04Sensor::begin(int triggerPin, int* echoPins, short echoCount, int timeout, bool unlock) {
 	this->triggerPin = triggerPin;
 	this->timeout = timeout;
-	this->unlock = unlock;
 	
-	size_t size = sizeof(echoPins)/sizeof(echoPins[0]);
-	this->triggerTimes = new unsigned long[size];
-	this->echoTimes = new unsigned long[size];
+	this->echoCount = echoCount;
+	this->triggerTimes = new unsigned long[echoCount];
+	this->echoTimes = new unsigned long[echoCount];
 	
-	this->echoPins = new int[size];
-	for (int i = 0; i < size; i++) {
+	this->echoPins = new int[echoCount];
+	for (int i = 0; i < this->echoCount; i++) {
 		this->echoPins[i] = digitalPinToInterrupt(echoPins[i]);
 	}
+	
+	// Unlock sensors that are possibly in a locked state, if this feature is enabled.
+	if (unlock) this->unlockSensors(echoPins);
 }
 
 long* HCSR04Sensor::measureMicroseconds() {
-	size_t size = sizeof(this->echoPins)/sizeof(this->echoPins[0]);
-	
-	// Unlock sensors that are possibly in a locked state, if this feature is enabled.
-	if (this->unlock) this->unlockSensors();
+	unsigned long startMicros = micros();
 	
 	// Make sure that trigger pin is LOW.
 	digitalWrite(triggerPin, LOW);
@@ -51,7 +50,7 @@ long* HCSR04Sensor::measureMicroseconds() {
 	digitalWrite(triggerPin, LOW);
 	
 	// Attach interrupts to echo pins for the starting point
-	for (int i = 0; i < size; i++) {
+	for (int i = 0; i < this->echoCount; i++) {
 		switch (i) {
 			case 0: attachInterrupt(this->echoPins[i], &triggerInterrupt0, RISING); break;
 			case 1: attachInterrupt(this->echoPins[i], &triggerInterrupt1, RISING); break;
@@ -73,9 +72,9 @@ long* HCSR04Sensor::measureMicroseconds() {
 		bool finished = true;
 		bool waiting = true;
 		
-		long currentMicros = micros();
-		for (int i = 0; i < size; i++) {
-			waiting &= currentMicros - this->triggerTimes[i] < this->timeout;
+		unsigned long currentMicros = micros();
+		for (int i = 0; i < this->echoCount; i++) {
+			waiting &= abs(currentMicros - startMicros) < this->timeout || (this->triggerTimes[i] > 0 && abs(currentMicros - this->triggerTimes[i]) < this->timeout);
 			
 			if (this->triggerTimes[i] > 0) {
 				switch (i) {
@@ -112,9 +111,15 @@ long* HCSR04Sensor::measureMicroseconds() {
 	}
 	
 	// Determine the durations of each sensor.
-	long* results = new long[size];
-	for (int i = 0; i < size; i++) {
-		results[i] = this->echoTimes[i] - this->triggerTimes[i];
+	long* results = new long[this->echoCount];
+	for (int i = 0; i < this->echoCount; i++) {
+		if (this->triggerTimes[i] > 0 && this->echoTimes[i] > 0) {
+			results[i] = this->echoTimes[i] - this->triggerTimes[i];
+		} else if (this->triggerTimes[i] > 0) {
+			results[i] = -1;
+		} else {
+			results[i] = -2;
+		}
 		
 		this->triggerTimes[i] = 0;
 		this->echoTimes[i] = 0;
@@ -128,14 +133,15 @@ double* HCSR04Sensor::measureDistanceMm() {
 }
 
 double* HCSR04Sensor::measureDistanceMm(float temperature) {
-	double speedOfSoundInMmPerMs = 331.3 + 0.0606 / 1000 * temperature; // Cair ≈ (331.3 + 0.606 ⋅ ϑ) m/s
-	size_t size = sizeof(this->echoPins)/sizeof(this->echoPins[0]);
-	long* results = measureMicroseconds();
+	double speedOfSoundInMmPerMs = (331.3 + 0.606 * temperature) / 1000 / 100; // Cair ≈ (331.3 + 0.606 ⋅ ϑ) m/s
+	
+	double* results = new double[this->echoCount];
+	long* times = measureMicroseconds();
 	
 	// Calculate the distance in mm for each result.
-	for (int i = 0; i < size; i++) {
-		double distanceCm = results[i] / 2.0 * speedOfSoundInMmPerMs;
-		if (distanceCm == 0 || distanceCm > 400) {
+	for (int i = 0; i < this->echoCount; i++) {
+		double distanceCm = times[i] / 2.0 * speedOfSoundInMmPerMs;
+		if (distanceCm < 1 || distanceCm > 400) {
 			results[i] = -1.0;
 		} else {
 			results[i] = distanceCm;
@@ -148,38 +154,40 @@ double* HCSR04Sensor::measureDistanceCm() {
 }
 
 double* HCSR04Sensor::measureDistanceCm(float temperature) {
-	double speedOfSoundInCmPerMs = 331.3 + 0.606 / 1000 * temperature; // Cair ≈ (331.3 + 0.606 ⋅ ϑ) m/s
-	size_t size = sizeof(this->echoPins)/sizeof(this->echoPins[0]);
-	long* results = measureMicroseconds();
+	double speedOfSoundInCmPerMs = (331.3 + 0.606 * temperature) / 1000 / 10; // Cair ≈ (331.3 + 0.606 ⋅ ϑ) m/s
+	
+	double* results = new double[this->echoCount];
+	long* times = measureMicroseconds();
 	
 	// Calculate the distance in cm for each result.
-	for (int i = 0; i < size; i++) {
-		double distanceCm = results[i] / 2.0 * speedOfSoundInCmPerMs;
-		if (distanceCm == 0 || distanceCm > 400) {
+	for (int i = 0; i < this->echoCount; i++) {
+		double distanceCm = times[i] / 2.0 * speedOfSoundInCmPerMs;
+		if (distanceCm < 1 || distanceCm > 400) {
 			results[i] = -1.0;
 		} else {
 			results[i] = distanceCm;
 		}
 	}
+	
+	return results;
 }
 
-void HCSR04Sensor::unlockSensors() {
+void HCSR04Sensor::unlockSensors(int* echoPins) {
 	bool hasLocked = false;
-	size_t size = sizeof(this->echoPins)/sizeof(this->echoPins[0]);
 
 	// Check if any sensor is in a locked state and unlock it if necessary.
-	for (int i = 0; i < size; i++) {
-		if (digitalRead(this->echoPins[i]) == LOW) continue;
-		pinMode(this->echoPins[i], OUTPUT);
-		digitalWrite(this->echoPins[i], LOW);
+	for (int i = 0; echoPins[i] != 0; i++) {
+		if (digitalRead(echoPins[i]) == LOW) continue;
+		pinMode(echoPins[i], OUTPUT);
+		digitalWrite(echoPins[i], LOW);
 		hasLocked = true;
 	}
 	
 	if (hasLocked) delay(50);
 
 	// Revert the pinMode after potential unlocking.
-	for (int i = 0; i < size; i++) {
-		pinMode(this->echoPins[i], INPUT);
+	for (int i = 0; echoPins[i] != 0; i++) {
+		pinMode(echoPins[i], INPUT);
 	}
 	
 	if (hasLocked) delay(50);

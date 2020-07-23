@@ -13,9 +13,9 @@ class HCSR04Sensor {
 		HCSR04Sensor();
 		
 		void begin(int triggerPin, int echoPin);
-		void begin(int triggerPin, int* echoPin);
+		void begin(int triggerPin, int* echoPins, short echoCount);
 		void begin(int triggerPin, int echoPin, int timeout, bool unlock);
-		void begin(int triggerPin, int* echoPin, int timeout, bool unlock);
+		void begin(int triggerPin, int* echoPins, short echoCount, int timeout, bool unlock);
 		
 		long* measureMicroseconds();
 		double* measureDistanceMm();
@@ -46,17 +46,17 @@ class HCSR04Sensor {
 		static void echoInterrupt9(void);
 	
 	private:
-		bool unlock;
 		int timeout;
 		int triggerPin;
 		unsigned long* triggerTimes;
 		
+		short echoCount;
 		int* echoPins;
 		unsigned long* echoTimes;
 		
 		void triggerInterrupt(int);
 		void echoInterrupt(int);
-		void unlockSensors();
+		void unlockSensors(int*);
 };
 
 extern HCSR04Sensor HCSR04;
