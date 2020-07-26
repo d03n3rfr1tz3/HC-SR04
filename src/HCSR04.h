@@ -11,11 +11,17 @@
 class HCSR04Sensor {
 	public:
 		HCSR04Sensor();
+
+		typedef enum eUltraSonicUnlock {
+			unlockSkip = 0,
+			unlockMaybe = 1,
+			unlockForced = 2
+		} eUltraSonicUnlock_t;
 		
 		void begin(int triggerPin, int echoPin);
 		void begin(int triggerPin, int* echoPins, short echoCount);
-		void begin(int triggerPin, int echoPin, int timeout, bool unlock);
-		void begin(int triggerPin, int* echoPins, short echoCount, int timeout, bool unlock);
+		void begin(int triggerPin, int echoPin, int timeout, eUltraSonicUnlock_t unlock);
+		void begin(int triggerPin, int* echoPins, short echoCount, int timeout, eUltraSonicUnlock_t unlock);
 		
 		unsigned long* measureMicroseconds();
 		double* measureDistanceMm();
@@ -58,7 +64,7 @@ class HCSR04Sensor {
 		
 		void triggerInterrupt(int);
 		void echoInterrupt(int);
-		void unlockSensors(int*);
+		void unlockSensors(eUltraSonicUnlock_t, int*);
 };
 
 extern HCSR04Sensor HCSR04;

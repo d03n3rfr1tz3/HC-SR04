@@ -13,14 +13,14 @@ void HCSR04Sensor::begin(int triggerPin, int echoPin) {
 }
 
 void HCSR04Sensor::begin(int triggerPin, int* echoPins, short echoCount) {
-	begin(triggerPin, echoPins, echoCount, 100000, false);
+	begin(triggerPin, echoPins, echoCount, 100000, eUltraSonicUnlock_t::unlockSkip);
 }
 
-void HCSR04Sensor::begin(int triggerPin, int echoPin, int timeout, bool unlock) {
+void HCSR04Sensor::begin(int triggerPin, int echoPin, int timeout, eUltraSonicUnlock_t unlock) {
 	begin(triggerPin, new int[1] { echoPin }, 1, timeout, unlock);
 }
 
-void HCSR04Sensor::begin(int triggerPin, int* echoPins, short echoCount, int timeout, bool unlock) {
+void HCSR04Sensor::begin(int triggerPin, int* echoPins, short echoCount, int timeout, eUltraSonicUnlock_t unlock) {
 	this->triggerPin = triggerPin;
 	pinMode(triggerPin, OUTPUT);
 
@@ -38,7 +38,7 @@ void HCSR04Sensor::begin(int triggerPin, int* echoPins, short echoCount, int tim
 	}
 	
 	// Unlock sensors that are possibly in a locked state, if this feature is enabled.
-	if (unlock) this->unlockSensors(echoPins);
+	this->unlockSensors(unlock, echoPins);
 }
 
 unsigned long* HCSR04Sensor::measureMicroseconds() {
@@ -202,25 +202,26 @@ double* HCSR04Sensor::measureDistanceIn(float temperature) {
 	return results;
 }
 
-void HCSR04Sensor::unlockSensors(int* echoPins) {
+void HCSR04Sensor::unlockSensors(eUltraSonicUnlock_t unlock, int* echoPins) {
+	if (unlock == eUltraSonicUnlock_t::unlockSkip) return;
 	bool hasLocked = false;
 
 	// Check if any sensor is in a locked state and unlock it if necessary.
 	for (int i = 0; echoPins[i] != 0; i++) {
-		if (digitalRead(echoPins[i]) == LOW) continue;
+		if (unlock == eUltraSonicUnlock_t::unlockMaybe && digitalRead(echoPins[i]) == LOW) continue;
 		pinMode(echoPins[i], OUTPUT);
 		digitalWrite(echoPins[i], LOW);
 		hasLocked = true;
 	}
 	
-	if (hasLocked) delay(75);
+	if (hasLocked) delay(100);
 
 	// Revert the pinMode after potential unlocking.
 	for (int i = 0; echoPins[i] != 0; i++) {
 		pinMode(echoPins[i], INPUT);
 	}
 	
-	if (hasLocked) delay(25);
+	if (hasLocked) delay(100);
 }
 
 void HCSR04Sensor::triggerInterrupt(int index) {
