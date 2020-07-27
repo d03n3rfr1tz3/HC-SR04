@@ -1,3 +1,5 @@
 HCSR04	KEYWORD1
+measureMicroseconds	KEYWORD2
 measureDistanceMm	KEYWORD2
-measureDistanceCm	KEYWORD3
+measureDistanceCm	KEYWORD2
+measureDistanceIn	KEYWORD2
