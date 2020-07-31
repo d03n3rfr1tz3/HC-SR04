@@ -82,22 +82,38 @@ unsigned long* HCSR04Sensor::measureMicroseconds() {
 			unsigned long elapsedMicrosI = currentMicros - this->triggerTimes[i];
 			waiting &= elapsedMicros < this->timeout || (this->triggerTimes[i] > 0 && elapsedMicrosI < this->timeout);
 			
-			if (this->triggerTimes[i] > 0) {
+			if (this->triggerTimes[i] > 0 || !waiting) {
 				switch (i) {
-					case 0: detachInterrupt(this->echoPins[i]); attachInterrupt(this->echoPins[i], &echoInterrupt0, FALLING); break;
-					case 1: detachInterrupt(this->echoPins[i]); attachInterrupt(this->echoPins[i], &echoInterrupt1, FALLING); break;
-					case 2: detachInterrupt(this->echoPins[i]); attachInterrupt(this->echoPins[i], &echoInterrupt2, FALLING); break;
-					case 3: detachInterrupt(this->echoPins[i]); attachInterrupt(this->echoPins[i], &echoInterrupt3, FALLING); break;
-					case 4: detachInterrupt(this->echoPins[i]); attachInterrupt(this->echoPins[i], &echoInterrupt4, FALLING); break;
-					case 5: detachInterrupt(this->echoPins[i]); attachInterrupt(this->echoPins[i], &echoInterrupt5, FALLING); break;
-					case 6: detachInterrupt(this->echoPins[i]); attachInterrupt(this->echoPins[i], &echoInterrupt6, FALLING); break;
-					case 7: detachInterrupt(this->echoPins[i]); attachInterrupt(this->echoPins[i], &echoInterrupt7, FALLING); break;
-					case 8: detachInterrupt(this->echoPins[i]); attachInterrupt(this->echoPins[i], &echoInterrupt8, FALLING); break;
-					case 9: detachInterrupt(this->echoPins[i]); attachInterrupt(this->echoPins[i], &echoInterrupt9, FALLING); break;
+					case 0: detachInterrupt(this->echoPins[i]);
+					case 1: detachInterrupt(this->echoPins[i]);
+					case 2: detachInterrupt(this->echoPins[i]);
+					case 3: detachInterrupt(this->echoPins[i]);
+					case 4: detachInterrupt(this->echoPins[i]);
+					case 5: detachInterrupt(this->echoPins[i]);
+					case 6: detachInterrupt(this->echoPins[i]);
+					case 7: detachInterrupt(this->echoPins[i]);
+					case 8: detachInterrupt(this->echoPins[i]);
+					case 9: detachInterrupt(this->echoPins[i]);
 				}
 			} else finished &= false;
+
+			if (this->triggerTimes[i] > 0) {
+				switch (i) {
+				case 0: attachInterrupt(this->echoPins[i], &echoInterrupt0, FALLING); break;
+				case 1: attachInterrupt(this->echoPins[i], &echoInterrupt1, FALLING); break;
+				case 2: attachInterrupt(this->echoPins[i], &echoInterrupt2, FALLING); break;
+				case 3: attachInterrupt(this->echoPins[i], &echoInterrupt3, FALLING); break;
+				case 4: attachInterrupt(this->echoPins[i], &echoInterrupt4, FALLING); break;
+				case 5: attachInterrupt(this->echoPins[i], &echoInterrupt5, FALLING); break;
+				case 6: attachInterrupt(this->echoPins[i], &echoInterrupt6, FALLING); break;
+				case 7: attachInterrupt(this->echoPins[i], &echoInterrupt7, FALLING); break;
+				case 8: attachInterrupt(this->echoPins[i], &echoInterrupt8, FALLING); break;
+				case 9: attachInterrupt(this->echoPins[i], &echoInterrupt9, FALLING); break;
+				}
+			}
+			else finished &= false;
 			
-			if (this->echoTimes[i] > 0) {
+			if (this->echoTimes[i] > 0 || !waiting) {
 				switch (i) {
 					case 0: detachInterrupt(this->echoPins[i]); break;
 					case 1: detachInterrupt(this->echoPins[i]); break;
