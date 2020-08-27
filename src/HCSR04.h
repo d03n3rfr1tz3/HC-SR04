@@ -23,13 +23,23 @@ class HCSR04Sensor {
 		void begin(int triggerPin, int echoPin, int timeout, eUltraSonicUnlock_t unlock);
 		void begin(int triggerPin, int* echoPins, short echoCount, int timeout, eUltraSonicUnlock_t unlock);
 		
-		unsigned long* measureMicroseconds();
-		double* measureDistanceMm();
-		double* measureDistanceMm(float temperature);
-		double* measureDistanceCm();
-		double* measureDistanceCm(float temperature);
-		double* measureDistanceIn();
-		double* measureDistanceIn(float temperature);
+		unsigned long* measureMicroseconds() { measureMicroseconds(lastMicroseconds); return lastMicroseconds; }
+		void measureMicroseconds(unsigned long* results);
+
+		double* measureDistanceMm() { measureDistanceMm(defaultTemperature, lastDistances); return lastDistances; }
+		void measureDistanceMm(double* results) { measureDistanceMm(defaultTemperature, results); }
+		double* measureDistanceMm(float temperature) { measureDistanceMm(temperature, lastDistances); return lastDistances; }
+		void measureDistanceMm(float temperature, double* results);
+
+		double* measureDistanceCm() { measureDistanceCm(defaultTemperature, lastDistances); return lastDistances; }
+		void measureDistanceCm(double* results) { measureDistanceCm(defaultTemperature, results); }
+		double* measureDistanceCm(float temperature) { measureDistanceCm(temperature, lastDistances); return lastDistances; }
+		void measureDistanceCm(float temperature, double* results);
+
+		double* measureDistanceIn() { measureDistanceIn(defaultTemperature, lastDistances); return lastDistances; }
+		void measureDistanceIn(double* results) { measureDistanceIn(defaultTemperature, results); }
+		double* measureDistanceIn(float temperature) { measureDistanceIn(temperature, lastDistances); return lastDistances; }
+		void measureDistanceIn(float temperature, double* results);
 		
 		static void triggerInterrupt0(void);
 		static void triggerInterrupt1(void);
@@ -54,6 +64,10 @@ class HCSR04Sensor {
 		static void echoInterrupt9(void);
 	
 	private:
+		float defaultTemperature = 19.307;
+		unsigned long* lastMicroseconds;
+		double* lastDistances;
+
 		int timeout;
 		volatile int triggerPin;
 		volatile unsigned long* volatile triggerTimes;

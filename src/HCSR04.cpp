@@ -28,6 +28,9 @@ void HCSR04Sensor::begin(int triggerPin, int* echoPins, short echoCount, int tim
 	this->echoCount = echoCount;
 	this->triggerTimes = new unsigned long[echoCount];
 	this->echoTimes = new unsigned long[echoCount];
+
+	this->lastMicroseconds = new unsigned long[echoCount];
+	this->lastDistances = new double[echoCount];
 	
 	this->echoPins = new int[echoCount];
 	for (int i = 0; i < this->echoCount; i++) {
@@ -41,7 +44,7 @@ void HCSR04Sensor::begin(int triggerPin, int* echoPins, short echoCount, int tim
 	this->unlockSensors(unlock, echoPins);
 }
 
-unsigned long* HCSR04Sensor::measureMicroseconds() {
+void HCSR04Sensor::measureMicroseconds(unsigned long* results) {
 	unsigned long startMicros = micros();
 	
 	// Make sure that trigger pin is LOW.
@@ -133,7 +136,6 @@ unsigned long* HCSR04Sensor::measureMicroseconds() {
 	}
 	
 	// Determine the durations of each sensor.
-	unsigned long* results = new unsigned long[this->echoCount];
 	for (int i = 0; i < this->echoCount; i++) {
 		if (this->triggerTimes[i] > 0 && this->echoTimes[i] > 0) {
 			results[i] = this->echoTimes[i] - this->triggerTimes[i];
@@ -146,18 +148,11 @@ unsigned long* HCSR04Sensor::measureMicroseconds() {
 		this->triggerTimes[i] = 0;
 		this->echoTimes[i] = 0;
 	}
-
-	return results;
 }
 
-double* HCSR04Sensor::measureDistanceMm() {
-	return measureDistanceMm(19.307);
-}
-
-double* HCSR04Sensor::measureDistanceMm(float temperature) {
+void HCSR04Sensor::measureDistanceMm(float temperature, double* results) {
 	double speedOfSoundInMmPerMs = (331.3 + 0.606 * temperature) / 1000 / 100; // Cair ≈ (331.3 + 0.606 ⋅ ϑ) m/s
 	
-	double* results = new double[this->echoCount];
 	unsigned long* times = measureMicroseconds();
 	
 	// Calculate the distance in mm for each result.
@@ -171,14 +166,9 @@ double* HCSR04Sensor::measureDistanceMm(float temperature) {
 	}
 }
 
-double* HCSR04Sensor::measureDistanceCm() {
-	return measureDistanceCm(19.307);
-}
-
-double* HCSR04Sensor::measureDistanceCm(float temperature) {
+void HCSR04Sensor::measureDistanceCm(float temperature, double* results) {
 	double speedOfSoundInCmPerMs = (331.3 + 0.606 * temperature) / 1000 / 10; // Cair ≈ (331.3 + 0.606 ⋅ ϑ) m/s
 	
-	double* results = new double[this->echoCount];
 	unsigned long* times = measureMicroseconds();
 	
 	// Calculate the distance in cm for each result.
@@ -190,18 +180,11 @@ double* HCSR04Sensor::measureDistanceCm(float temperature) {
 			results[i] = distanceCm;
 		}
 	}
-	
-	return results;
 }
 
-double* HCSR04Sensor::measureDistanceIn() {
-	return measureDistanceCm(19.307);
-}
-
-double* HCSR04Sensor::measureDistanceIn(float temperature) {
+void HCSR04Sensor::measureDistanceIn(float temperature, double* results) {
 	double speedOfSoundInCmPerMs = (331.3 + 0.606 * temperature) * 39.37007874 / 1000 / 10; // Cair ≈ (331.3 + 0.606 ⋅ ϑ) m/s
 
-	double* results = new double[this->echoCount];
 	unsigned long* times = measureMicroseconds();
 
 	// Calculate the distance in cm for each result.
@@ -214,8 +197,6 @@ double* HCSR04Sensor::measureDistanceIn(float temperature) {
 			results[i] = distanceCm;
 		}
 	}
-
-	return results;
 }
 
 void HCSR04Sensor::unlockSensors(eUltraSonicUnlock_t unlock, int* echoPins) {
