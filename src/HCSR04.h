@@ -11,6 +11,7 @@
 class HCSR04Sensor {
 	public:
 		HCSR04Sensor();
+		~HCSR04Sensor();
 
 		typedef enum eUltraSonicUnlock {
 			unlockSkip = 0,
@@ -18,26 +19,27 @@ class HCSR04Sensor {
 			unlockForced = 2
 		} eUltraSonicUnlock_t;
 		
-		void begin(int triggerPin, int echoPin);
-		void begin(int triggerPin, int* echoPins, short echoCount);
-		void begin(int triggerPin, int echoPin, int timeout, eUltraSonicUnlock_t unlock);
+		void begin(int triggerPin, int echoPin) { begin(triggerPin, new int[1]{ echoPin }, 1); }
+		void begin(int triggerPin, int* echoPins, short echoCount) { begin(triggerPin, echoPins, echoCount, 100000, eUltraSonicUnlock_t::unlockSkip); }
+		void begin(int triggerPin, int echoPin, int timeout, eUltraSonicUnlock_t unlock) { begin(triggerPin, new int[1]{ echoPin }, 1, timeout, unlock); }
 		void begin(int triggerPin, int* echoPins, short echoCount, int timeout, eUltraSonicUnlock_t unlock);
+		void end();
 		
 		unsigned long* measureMicroseconds() { measureMicroseconds(lastMicroseconds); return lastMicroseconds; }
 		void measureMicroseconds(unsigned long* results);
 
 		double* measureDistanceMm() { measureDistanceMm(defaultTemperature, lastDistances); return lastDistances; }
-		void measureDistanceMm(double* results) { measureDistanceMm(defaultTemperature, results); }
+		void measureDistanceMm(double* results) { measureDistanceMm(defaultTemperature, results == NULL ? lastDistances : results); }
 		double* measureDistanceMm(float temperature) { measureDistanceMm(temperature, lastDistances); return lastDistances; }
 		void measureDistanceMm(float temperature, double* results);
 
 		double* measureDistanceCm() { measureDistanceCm(defaultTemperature, lastDistances); return lastDistances; }
-		void measureDistanceCm(double* results) { measureDistanceCm(defaultTemperature, results); }
+		void measureDistanceCm(double* results) { measureDistanceCm(defaultTemperature, results == NULL ? lastDistances : results); }
 		double* measureDistanceCm(float temperature) { measureDistanceCm(temperature, lastDistances); return lastDistances; }
 		void measureDistanceCm(float temperature, double* results);
 
 		double* measureDistanceIn() { measureDistanceIn(defaultTemperature, lastDistances); return lastDistances; }
-		void measureDistanceIn(double* results) { measureDistanceIn(defaultTemperature, results); }
+		void measureDistanceIn(double* results) { measureDistanceIn(defaultTemperature, results == NULL ? lastDistances : results); }
 		double* measureDistanceIn(float temperature) { measureDistanceIn(temperature, lastDistances); return lastDistances; }
 		void measureDistanceIn(float temperature, double* results);
 		

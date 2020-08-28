@@ -7,32 +7,24 @@
 #include "HCSR04.h"
 
 HCSR04Sensor::HCSR04Sensor() {}
-
-void HCSR04Sensor::begin(int triggerPin, int echoPin) {
-	begin(triggerPin, new int[1] { echoPin }, 1);
-}
-
-void HCSR04Sensor::begin(int triggerPin, int* echoPins, short echoCount) {
-	begin(triggerPin, echoPins, echoCount, 100000, eUltraSonicUnlock_t::unlockSkip);
-}
-
-void HCSR04Sensor::begin(int triggerPin, int echoPin, int timeout, eUltraSonicUnlock_t unlock) {
-	begin(triggerPin, new int[1] { echoPin }, 1, timeout, unlock);
-}
+HCSR04Sensor::~HCSR04Sensor() { this->end(); }
 
 void HCSR04Sensor::begin(int triggerPin, int* echoPins, short echoCount, int timeout, eUltraSonicUnlock_t unlock) {
+	if (this->echoCount != echoCount) this->end();
+	
 	this->triggerPin = triggerPin;
 	pinMode(triggerPin, OUTPUT);
 
 	this->timeout = timeout;
 	this->echoCount = echoCount;
-	this->triggerTimes = new unsigned long[echoCount];
-	this->echoTimes = new unsigned long[echoCount];
-
-	this->lastMicroseconds = new unsigned long[echoCount];
-	this->lastDistances = new double[echoCount];
 	
-	this->echoPins = new int[echoCount];
+	if (this->lastMicroseconds == NULL) this->lastMicroseconds = new unsigned long[echoCount];
+	if (this->lastDistances == NULL) this->lastDistances = new double[echoCount];
+	
+	if (this->triggerTimes == NULL) this->triggerTimes = new unsigned long[echoCount];
+	if (this->echoTimes == NULL) this->echoTimes = new unsigned long[echoCount];
+
+	if (this->echoPins == NULL) this->echoPins = new int[echoCount];
 	for (int i = 0; i < this->echoCount; i++) {
 		this->triggerTimes[i] = 0;
 		this->echoTimes[i] = 0;
@@ -44,7 +36,23 @@ void HCSR04Sensor::begin(int triggerPin, int* echoPins, short echoCount, int tim
 	this->unlockSensors(unlock, echoPins);
 }
 
+void HCSR04Sensor::end() {
+	if (this->lastMicroseconds != NULL) delete []this->lastMicroseconds;
+	if (this->lastDistances != NULL) delete []this->lastDistances;
+	if (this->triggerTimes != NULL) delete []this->triggerTimes;
+	if (this->echoTimes != NULL) delete []this->echoTimes;
+	if (this->echoPins != NULL) delete []this->echoPins;
+	
+	this->lastMicroseconds = NULL;
+	this->lastDistances = NULL;
+	this->triggerTimes = NULL;
+	this->echoTimes = NULL;
+	this->echoPins = NULL;
+}
+
 void HCSR04Sensor::measureMicroseconds(unsigned long* results) {
+	if (results == NULL) results = this->lastMicroseconds;
+
 	unsigned long startMicros = micros();
 	
 	// Make sure that trigger pin is LOW.
@@ -151,8 +159,9 @@ void HCSR04Sensor::measureMicroseconds(unsigned long* results) {
 }
 
 void HCSR04Sensor::measureDistanceMm(float temperature, double* results) {
+	if (results == NULL) results = this->lastDistances;
+
 	double speedOfSoundInMmPerMs = (331.3 + 0.606 * temperature) / 1000 / 100; // Cair ≈ (331.3 + 0.606 ⋅ ϑ) m/s
-	
 	unsigned long* times = measureMicroseconds();
 	
 	// Calculate the distance in mm for each result.
@@ -167,8 +176,9 @@ void HCSR04Sensor::measureDistanceMm(float temperature, double* results) {
 }
 
 void HCSR04Sensor::measureDistanceCm(float temperature, double* results) {
+	if (results == NULL) results = this->lastDistances;
+
 	double speedOfSoundInCmPerMs = (331.3 + 0.606 * temperature) / 1000 / 10; // Cair ≈ (331.3 + 0.606 ⋅ ϑ) m/s
-	
 	unsigned long* times = measureMicroseconds();
 	
 	// Calculate the distance in cm for each result.
@@ -183,8 +193,9 @@ void HCSR04Sensor::measureDistanceCm(float temperature, double* results) {
 }
 
 void HCSR04Sensor::measureDistanceIn(float temperature, double* results) {
-	double speedOfSoundInCmPerMs = (331.3 + 0.606 * temperature) * 39.37007874 / 1000 / 10; // Cair ≈ (331.3 + 0.606 ⋅ ϑ) m/s
+	if (results == NULL) results = this->lastDistances;
 
+	double speedOfSoundInCmPerMs = (331.3 + 0.606 * temperature) * 39.37007874 / 1000 / 10; // Cair ≈ (331.3 + 0.606 ⋅ ϑ) m/s
 	unsigned long* times = measureMicroseconds();
 
 	// Calculate the distance in cm for each result.
