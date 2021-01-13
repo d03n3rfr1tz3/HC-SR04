@@ -80,6 +80,7 @@ class HCSR04Sensor {
 		
 		short echoCount;
 		volatile int* volatile echoInts;
+		volatile int* volatile echoStages;
 		volatile int* volatile echoMasks;
 		volatile int* volatile echoPorts;
 		volatile unsigned long* volatile echoTimes;
