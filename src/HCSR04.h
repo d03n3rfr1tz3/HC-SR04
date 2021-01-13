@@ -8,6 +8,10 @@
 
 #include "Arduino.h"
 
+#define HCSR04_INVALID_RESULT -1;
+#define HCSR04_NO_TRIGGER -2;
+#define HCSR04_NO_ECHO -3;
+
 class HCSR04Sensor {
 	public:
 		HCSR04Sensor();
@@ -25,8 +29,8 @@ class HCSR04Sensor {
 		void begin(int triggerPin, int* echoPins, short echoCount, int timeout, eUltraSonicUnlock_t unlock);
 		void end();
 		
-		unsigned long* measureMicroseconds() { measureMicroseconds(lastMicroseconds); return lastMicroseconds; }
-		void measureMicroseconds(unsigned long* results);
+		long* measureMicroseconds() { measureMicroseconds(lastMicroseconds); return lastMicroseconds; }
+		void measureMicroseconds(long* results);
 
 		double* measureDistanceMm() { measureDistanceMm(defaultTemperature, lastDistances); return lastDistances; }
 		void measureDistanceMm(double* results) { measureDistanceMm(defaultTemperature, results == NULL ? lastDistances : results); }
@@ -67,7 +71,7 @@ class HCSR04Sensor {
 	
 	private:
 		float defaultTemperature = 19.307;
-		unsigned long* lastMicroseconds;
+		long* lastMicroseconds;
 		double* lastDistances;
 
 		int timeout;
@@ -75,7 +79,9 @@ class HCSR04Sensor {
 		volatile unsigned long* volatile triggerTimes;
 		
 		short echoCount;
-		volatile int* volatile echoPins;
+		volatile int* volatile echoInts;
+		volatile int* volatile echoMasks;
+		volatile int* volatile echoPorts;
 		volatile unsigned long* volatile echoTimes;
 		
 		void triggerInterrupt(int);

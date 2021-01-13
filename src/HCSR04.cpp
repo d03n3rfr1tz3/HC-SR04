@@ -18,17 +18,31 @@ void HCSR04Sensor::begin(int triggerPin, int* echoPins, short echoCount, int tim
 	this->timeout = timeout;
 	this->echoCount = echoCount;
 	
-	if (this->lastMicroseconds == NULL) this->lastMicroseconds = new unsigned long[echoCount];
+	if (this->lastMicroseconds == NULL) this->lastMicroseconds = new long[echoCount];
 	if (this->lastDistances == NULL) this->lastDistances = new double[echoCount];
 	
 	if (this->triggerTimes == NULL) this->triggerTimes = new unsigned long[echoCount];
 	if (this->echoTimes == NULL) this->echoTimes = new unsigned long[echoCount];
 
-	if (this->echoPins == NULL) this->echoPins = new int[echoCount];
+	if (this->echoInts == NULL) this->echoInts = new int[echoCount];
+	if (this->echoMasks == NULL) this->echoMasks = new int[echoCount];
+	if (this->echoPorts == NULL) this->echoPorts = new int[echoCount];
+
 	for (int i = 0; i < this->echoCount; i++) {
 		this->triggerTimes[i] = 0;
 		this->echoTimes[i] = 0;
-		this->echoPins[i] = digitalPinToInterrupt(echoPins[i]);
+
+		uint8_t interrupt = digitalPinToInterrupt(echoPins[i]);
+		if (interrupt == NOT_AN_INTERRUPT) {
+			this->echoInts[i] = -1;
+			this->echoMasks[i] = digitalPinToBitMask(echoPins[i]);
+			this->echoPorts[i] = digitalPinToPort(echoPins[i]);
+		} else {
+			this->echoInts[i] = interrupt;
+			this->echoMasks[i] = -1;
+			this->echoPorts[i] = -1;
+		}
+
 		pinMode(echoPins[i], INPUT);
 	}
 	
@@ -41,20 +55,28 @@ void HCSR04Sensor::end() {
 	if (this->lastDistances != NULL) delete []this->lastDistances;
 	if (this->triggerTimes != NULL) delete []this->triggerTimes;
 	if (this->echoTimes != NULL) delete []this->echoTimes;
-	if (this->echoPins != NULL) delete []this->echoPins;
+	if (this->echoMasks != NULL) delete []this->echoMasks;
+	if (this->echoPorts != NULL) delete []this->echoPorts;
+	if (this->echoInts != NULL) delete []this->echoInts;
 	
 	this->lastMicroseconds = NULL;
 	this->lastDistances = NULL;
 	this->triggerTimes = NULL;
 	this->echoTimes = NULL;
-	this->echoPins = NULL;
+	this->echoMasks = NULL;
+	this->echoPorts = NULL;
+	this->echoInts = NULL;
 }
 
-void HCSR04Sensor::measureMicroseconds(unsigned long* results) {
+void HCSR04Sensor::measureMicroseconds(long* results) {
 	if (results == NULL) results = this->lastMicroseconds;
 
+	bool finished = true;
+	bool waiting = true;
 	unsigned long startMicros = micros();
-	
+	unsigned long currentMicros = 0;
+	unsigned long elapsedMicros = 0;
+
 	// Make sure that trigger pin is LOW.
 	digitalWrite(triggerPin, LOW);
 	delayMicroseconds(2);
@@ -67,75 +89,62 @@ void HCSR04Sensor::measureMicroseconds(unsigned long* results) {
 	// Attach interrupts to echo pins for the starting point
 	for (int i = 0; i < this->echoCount; i++) {
 		switch (i) {
-			case 0: attachInterrupt(this->echoPins[i], &triggerInterrupt0, RISING); break;
-			case 1: attachInterrupt(this->echoPins[i], &triggerInterrupt1, RISING); break;
-			case 2: attachInterrupt(this->echoPins[i], &triggerInterrupt2, RISING); break;
-			case 3: attachInterrupt(this->echoPins[i], &triggerInterrupt3, RISING); break;
-			case 4: attachInterrupt(this->echoPins[i], &triggerInterrupt4, RISING); break;
-			case 5: attachInterrupt(this->echoPins[i], &triggerInterrupt5, RISING); break;
-			case 6: attachInterrupt(this->echoPins[i], &triggerInterrupt6, RISING); break;
-			case 7: attachInterrupt(this->echoPins[i], &triggerInterrupt7, RISING); break;
-			case 8: attachInterrupt(this->echoPins[i], &triggerInterrupt8, RISING); break;
-			case 9: attachInterrupt(this->echoPins[i], &triggerInterrupt9, RISING); break;
+			case 0: if (this->echoInts[i] >= 0) attachInterrupt(this->echoInts[i], &triggerInterrupt0, RISING); break;
+			case 1: if (this->echoInts[i] >= 0) attachInterrupt(this->echoInts[i], &triggerInterrupt1, RISING); break;
+			case 2: if (this->echoInts[i] >= 0) attachInterrupt(this->echoInts[i], &triggerInterrupt2, RISING); break;
+			case 3: if (this->echoInts[i] >= 0) attachInterrupt(this->echoInts[i], &triggerInterrupt3, RISING); break;
+			case 4: if (this->echoInts[i] >= 0) attachInterrupt(this->echoInts[i], &triggerInterrupt4, RISING); break;
+			case 5: if (this->echoInts[i] >= 0) attachInterrupt(this->echoInts[i], &triggerInterrupt5, RISING); break;
+			case 6: if (this->echoInts[i] >= 0) attachInterrupt(this->echoInts[i], &triggerInterrupt6, RISING); break;
+			case 7: if (this->echoInts[i] >= 0) attachInterrupt(this->echoInts[i], &triggerInterrupt7, RISING); break;
+			case 8: if (this->echoInts[i] >= 0) attachInterrupt(this->echoInts[i], &triggerInterrupt8, RISING); break;
+			case 9: if (this->echoInts[i] >= 0) attachInterrupt(this->echoInts[i], &triggerInterrupt9, RISING); break;
 		}
 	}
 	
 	// Wait until all echos are returned or timed out.
-	while(1) {
+	while(true) {
 		delayMicroseconds(1);
 		
-		bool finished = true;
-		bool waiting = true;
-		
-		unsigned long currentMicros = micros();
-		unsigned long elapsedMicros = currentMicros - startMicros;
+		finished = true;
+		waiting = true;
+		currentMicros = micros();
+		elapsedMicros = currentMicros - startMicros;
+
 		for (int i = 0; i < this->echoCount; i++) {
-			unsigned long elapsedMicrosI = currentMicros - this->triggerTimes[i];
-			waiting &= elapsedMicros < this->timeout || (this->triggerTimes[i] > 0 && elapsedMicrosI < this->timeout);
-			
+			waiting &= elapsedMicros < this->timeout || (this->triggerTimes[i] > 0 && this->echoTimes[i] == 0 && (currentMicros - this->triggerTimes[i]) < this->timeout);
+
+			if (this->triggerTimes[i] == 0 && this->echoPorts[i] >= 0) {
+				if ((*portInputRegister(this->echoPorts[i]) & this->echoMasks[i]) == this->echoMasks[i]) this->triggerTimes[i] = micros();
+			} else finished &= false;
+
 			if (this->triggerTimes[i] > 0 || !waiting) {
-				switch (i) {
-					case 0: detachInterrupt(this->echoPins[i]);
-					case 1: detachInterrupt(this->echoPins[i]);
-					case 2: detachInterrupt(this->echoPins[i]);
-					case 3: detachInterrupt(this->echoPins[i]);
-					case 4: detachInterrupt(this->echoPins[i]);
-					case 5: detachInterrupt(this->echoPins[i]);
-					case 6: detachInterrupt(this->echoPins[i]);
-					case 7: detachInterrupt(this->echoPins[i]);
-					case 8: detachInterrupt(this->echoPins[i]);
-					case 9: detachInterrupt(this->echoPins[i]);
-				}
+				if (this->echoInts[i] >= 0) detachInterrupt(this->echoInts[i]);
 			} else finished &= false;
 
 			if (this->triggerTimes[i] > 0) {
 				switch (i) {
-				case 0: attachInterrupt(this->echoPins[i], &echoInterrupt0, FALLING); break;
-				case 1: attachInterrupt(this->echoPins[i], &echoInterrupt1, FALLING); break;
-				case 2: attachInterrupt(this->echoPins[i], &echoInterrupt2, FALLING); break;
-				case 3: attachInterrupt(this->echoPins[i], &echoInterrupt3, FALLING); break;
-				case 4: attachInterrupt(this->echoPins[i], &echoInterrupt4, FALLING); break;
-				case 5: attachInterrupt(this->echoPins[i], &echoInterrupt5, FALLING); break;
-				case 6: attachInterrupt(this->echoPins[i], &echoInterrupt6, FALLING); break;
-				case 7: attachInterrupt(this->echoPins[i], &echoInterrupt7, FALLING); break;
-				case 8: attachInterrupt(this->echoPins[i], &echoInterrupt8, FALLING); break;
-				case 9: attachInterrupt(this->echoPins[i], &echoInterrupt9, FALLING); break;
+					case 0: if (this->echoInts[i] >= 0) attachInterrupt(this->echoInts[i], &echoInterrupt0, FALLING); break;
+					case 1: if (this->echoInts[i] >= 0) attachInterrupt(this->echoInts[i], &echoInterrupt1, FALLING); break;
+					case 2: if (this->echoInts[i] >= 0) attachInterrupt(this->echoInts[i], &echoInterrupt2, FALLING); break;
+					case 3: if (this->echoInts[i] >= 0) attachInterrupt(this->echoInts[i], &echoInterrupt3, FALLING); break;
+					case 4: if (this->echoInts[i] >= 0) attachInterrupt(this->echoInts[i], &echoInterrupt4, FALLING); break;
+					case 5: if (this->echoInts[i] >= 0) attachInterrupt(this->echoInts[i], &echoInterrupt5, FALLING); break;
+					case 6: if (this->echoInts[i] >= 0) attachInterrupt(this->echoInts[i], &echoInterrupt6, FALLING); break;
+					case 7: if (this->echoInts[i] >= 0) attachInterrupt(this->echoInts[i], &echoInterrupt7, FALLING); break;
+					case 8: if (this->echoInts[i] >= 0) attachInterrupt(this->echoInts[i], &echoInterrupt8, FALLING); break;
+					case 9: if (this->echoInts[i] >= 0) attachInterrupt(this->echoInts[i], &echoInterrupt9, FALLING); break;
 				}
-			}
-			else finished &= false;
+			} else finished &= false;
+
+			if (this->triggerTimes[i] > 0 && this->echoTimes[i] == 0 && this->echoPorts[i] >= 0) {
+				if ((*portInputRegister(this->echoPorts[i]) & this->echoMasks[i]) != this->echoMasks[i]) this->echoTimes[i] = micros();
+			} else finished &= false;
 			
-			if (this->echoTimes[i] > 0 || !waiting) {
-				switch (i) {
-					case 0: detachInterrupt(this->echoPins[i]); break;
-					case 1: detachInterrupt(this->echoPins[i]); break;
-					case 2: detachInterrupt(this->echoPins[i]); break;
-					case 3: detachInterrupt(this->echoPins[i]); break;
-					case 4: detachInterrupt(this->echoPins[i]); break;
-					case 5: detachInterrupt(this->echoPins[i]); break;
-					case 6: detachInterrupt(this->echoPins[i]); break;
-					case 7: detachInterrupt(this->echoPins[i]); break;
-					case 8: detachInterrupt(this->echoPins[i]); break;
-					case 9: detachInterrupt(this->echoPins[i]); break;
+			if ((this->triggerTimes[i] > 0 && this->echoTimes[i] > 0) || !waiting) {
+				if (this->echoInts[i] >= 0) detachInterrupt(this->echoInts[i]);
+				if (this->echoPorts[i] >= 0 && this->echoTimes[i] == 0) {
+					if ((*portInputRegister(this->echoPorts[i]) & this->echoMasks[i]) != this->echoMasks[i]) this->echoTimes[i] = micros();
 				}
 			} else finished &= false;
 		}
@@ -146,11 +155,12 @@ void HCSR04Sensor::measureMicroseconds(unsigned long* results) {
 	// Determine the durations of each sensor.
 	for (int i = 0; i < this->echoCount; i++) {
 		if (this->triggerTimes[i] > 0 && this->echoTimes[i] > 0) {
-			results[i] = this->echoTimes[i] - this->triggerTimes[i];
+			long resultTime = this->echoTimes[i] - this->triggerTimes[i];
+			results[i] = resultTime > 0 ? resultTime : HCSR04_INVALID_RESULT;
 		} else if (this->triggerTimes[i] > 0) {
-			results[i] = -1;
+			results[i] = HCSR04_NO_ECHO;
 		} else {
-			results[i] = -2;
+			results[i] = HCSR04_NO_TRIGGER;
 		}
 
 		this->triggerTimes[i] = 0;
@@ -161,16 +171,16 @@ void HCSR04Sensor::measureMicroseconds(unsigned long* results) {
 void HCSR04Sensor::measureDistanceMm(float temperature, double* results) {
 	if (results == NULL) results = this->lastDistances;
 
-	double speedOfSoundInMmPerMs = (331.3 + 0.606 * temperature) / 1000 / 100; // Cair ≈ (331.3 + 0.606 ⋅ ϑ) m/s
-	unsigned long* times = measureMicroseconds();
+	double speedOfSoundInMmPerMs = (331.3 + 0.606 * temperature) / 1000; // Cair ≈ (331.3 + 0.606 ⋅ ϑ) m/s
+	long* times = measureMicroseconds();
 	
 	// Calculate the distance in mm for each result.
 	for (int i = 0; i < this->echoCount; i++) {
-		double distanceCm = times[i] / 2.0 * speedOfSoundInMmPerMs;
-		if (distanceCm < 1 || distanceCm > 400) {
-			results[i] = -1.0;
+		double distanceMm = times[i] / 2.0 * speedOfSoundInMmPerMs;
+		if (distanceMm < 10 || distanceMm > 4000) {
+			results[i] = HCSR04_INVALID_RESULT;
 		} else {
-			results[i] = distanceCm;
+			results[i] = distanceMm;
 		}
 	}
 }
@@ -179,13 +189,13 @@ void HCSR04Sensor::measureDistanceCm(float temperature, double* results) {
 	if (results == NULL) results = this->lastDistances;
 
 	double speedOfSoundInCmPerMs = (331.3 + 0.606 * temperature) / 1000 / 10; // Cair ≈ (331.3 + 0.606 ⋅ ϑ) m/s
-	unsigned long* times = measureMicroseconds();
+	long* times = measureMicroseconds();
 	
 	// Calculate the distance in cm for each result.
 	for (int i = 0; i < this->echoCount; i++) {
 		double distanceCm = times[i] / 2.0 * speedOfSoundInCmPerMs;
 		if (distanceCm < 1 || distanceCm > 400) {
-			results[i] = -1.0;
+			results[i] = HCSR04_INVALID_RESULT;
 		} else {
 			results[i] = distanceCm;
 		}
@@ -195,17 +205,17 @@ void HCSR04Sensor::measureDistanceCm(float temperature, double* results) {
 void HCSR04Sensor::measureDistanceIn(float temperature, double* results) {
 	if (results == NULL) results = this->lastDistances;
 
-	double speedOfSoundInCmPerMs = (331.3 + 0.606 * temperature) * 39.37007874 / 1000 / 10; // Cair ≈ (331.3 + 0.606 ⋅ ϑ) m/s
-	unsigned long* times = measureMicroseconds();
+	double speedOfSoundInCmPerMs = (331.3 + 0.606 * temperature) * 39.37007874 / 1000 / 1000; // Cair ≈ (331.3 + 0.606 ⋅ ϑ) m/s
+	long* times = measureMicroseconds();
 
 	// Calculate the distance in cm for each result.
 	for (int i = 0; i < this->echoCount; i++) {
-		double distanceCm = times[i] / 2.0 * speedOfSoundInCmPerMs;
-		if (distanceCm < 1 || distanceCm > 400) {
-			results[i] = -1.0;
+		double distanceIn = times[i] / 2.0 * speedOfSoundInCmPerMs;
+		if (distanceIn < 1 || distanceIn > 157.4804) {
+			results[i] = HCSR04_INVALID_RESULT;
 		}
 		else {
-			results[i] = distanceCm;
+			results[i] = distanceIn;
 		}
 	}
 }
@@ -237,7 +247,7 @@ void HCSR04Sensor::triggerInterrupt(int index) {
 }
 
 void HCSR04Sensor::echoInterrupt(int index) {
-	if (this->echoTimes[index] == 0) this->echoTimes[index] = micros();
+	if (this->triggerTimes[index] > 0 && this->echoTimes[index] == 0) this->echoTimes[index] = micros();
 }
 
 void HCSR04Sensor::triggerInterrupt0() { HCSR04.triggerInterrupt(0); }

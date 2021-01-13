@@ -16,7 +16,7 @@ void loop () {
     Serial.print(i + 1);
     Serial.print(": ");
     Serial.print(distances[i]);
-    Serial.println("cm");
+    Serial.println(" cm");
   }
   
   Serial.println("---");

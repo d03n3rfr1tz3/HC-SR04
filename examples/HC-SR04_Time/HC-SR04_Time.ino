@@ -10,13 +10,13 @@ void setup () {
 }
 
 void loop () {
-  unsigned long* times = HCSR04.measureMicroseconds();
+  long* times = HCSR04.measureMicroseconds();
   
   for (int i = 0; i < echoCount; i++) {
     Serial.print(i + 1);
     Serial.print(": ");
     Serial.print(times[i]);
-    Serial.println("μs");
+    Serial.println(" μs");
   }
   
   Serial.println("---");
