@@ -1,7 +1,7 @@
 #include <HCSR04.h>
 
-int triggerPin = 21;
-int echoPin = 12;
+uint8_t triggerPin = 21;
+uint8_t echoPin = 12;
 
 void setup () {
   Serial.begin(9600);

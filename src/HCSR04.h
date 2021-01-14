@@ -23,10 +23,10 @@ class HCSR04Sensor {
 			unlockForced = 2
 		} eUltraSonicUnlock_t;
 		
-		void begin(int triggerPin, int echoPin) { begin(triggerPin, new int[1]{ echoPin }, 1); }
-		void begin(int triggerPin, int* echoPins, short echoCount) { begin(triggerPin, echoPins, echoCount, 100000, eUltraSonicUnlock_t::unlockSkip); }
-		void begin(int triggerPin, int echoPin, int timeout, eUltraSonicUnlock_t unlock) { begin(triggerPin, new int[1]{ echoPin }, 1, timeout, unlock); }
-		void begin(int triggerPin, int* echoPins, short echoCount, int timeout, eUltraSonicUnlock_t unlock);
+		void begin(byte triggerPin, byte echoPin) { begin(triggerPin, new byte[1]{ echoPin }, 1); }
+		void begin(byte triggerPin, byte* echoPins, byte echoCount) { begin(triggerPin, echoPins, echoCount, 100000, eUltraSonicUnlock_t::unlockSkip); }
+		void begin(byte triggerPin, byte echoPin, int timeout, eUltraSonicUnlock_t unlock) { begin(triggerPin, new byte[1]{ echoPin }, 1, timeout, unlock); }
+		void begin(byte triggerPin, byte* echoPins, byte echoCount, int timeout, eUltraSonicUnlock_t unlock);
 		void end();
 		
 		long* measureMicroseconds() { measureMicroseconds(lastMicroseconds); return lastMicroseconds; }
@@ -75,19 +75,19 @@ class HCSR04Sensor {
 		double* lastDistances;
 
 		int timeout;
-		volatile int triggerPin;
+		volatile byte triggerPin;
 		volatile unsigned long* volatile triggerTimes;
 		
-		short echoCount;
-		volatile int* volatile echoInts;
-		volatile int* volatile echoStages;
-		volatile int* volatile echoMasks;
-		volatile int* volatile echoPorts;
+		byte echoCount;
+		volatile byte* volatile echoInts;
+		volatile byte* volatile echoStages;
+		volatile byte* volatile echoMasks;
+		volatile byte* volatile echoPorts;
 		volatile unsigned long* volatile echoTimes;
 		
-		void triggerInterrupt(int);
-		void echoInterrupt(int);
-		void unlockSensors(eUltraSonicUnlock_t, int*);
+		void triggerInterrupt(byte);
+		void echoInterrupt(byte);
+		void unlockSensors(eUltraSonicUnlock_t, byte*);
 };
 
 extern HCSR04Sensor HCSR04;

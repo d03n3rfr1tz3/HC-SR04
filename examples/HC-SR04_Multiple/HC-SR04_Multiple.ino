@@ -1,8 +1,8 @@
 #include <HCSR04.h>
 
-int triggerPin = 21;
-short echoCount = 2;
-int* echoPins = new int[echoCount] { 12, 13 };
+uint8_t triggerPin = 21;
+uint8_t echoCount = 2;
+uint8_t* echoPins = new uint8_t[echoCount] { 12, 13 };
 
 void setup () {
   Serial.begin(9600);
