@@ -14,9 +14,9 @@ This library is used for measuring distance with the HC-SR04, which is an ultras
 ```c
 #include <HCSR04.h>
 
-int triggerPin = 21;
-short echoCount = 2;
-int* echoPins = new int[echoCount] { 12, 13 };
+byte triggerPin = 21;
+byte echoCount = 2;
+byte* echoPins = new byte[echoCount] { 12, 13 };
 
 void setup () {
   Serial.begin(115200);
@@ -27,12 +27,14 @@ void loop () {
   double* distances = HCSR04.measureDistanceCm();
   
   for (int i = 0; i < echoCount; i++) {
+    if (i > 0) Serial.print(" | ");
     Serial.print(i + 1);
     Serial.print(": ");
-    Serial.println(distances[i]);
+    Serial.print(distances[i]);
+    Serial.print(" cm");
   }
   
-  Serial.println("---");
+  Serial.println("");
   delay(500);
 }
 ```
