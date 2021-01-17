@@ -1,8 +1,8 @@
 #include <HCSR04.h>
 
-uint8_t triggerPin = 21;
-uint8_t echoCount = 2;
-uint8_t* echoPins = new uint8_t[echoCount] { 12, 13 };
+byte triggerPin = 21;
+byte echoCount = 2;
+byte* echoPins = new byte[echoCount] { 12, 13 };
 
 void setup () {
   Serial.begin(9600);
@@ -20,5 +20,5 @@ void loop () {
   }
   
   Serial.println("---");
-  delay(500);
+  delay(250);
 }

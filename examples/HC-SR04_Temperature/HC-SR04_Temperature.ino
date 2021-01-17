@@ -9,7 +9,9 @@ void setup () {
 }
 
 void loop () {
-  double* distances = HCSR04.measureDistanceCm();
+  float temperature = 15;
+  
+  double* distances = HCSR04.measureDistanceCm(temperature);
   
   Serial.print("1: ");
   Serial.print(distances[0]);
