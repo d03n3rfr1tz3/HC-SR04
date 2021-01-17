@@ -8,9 +8,9 @@
 
 #include "Arduino.h"
 
-#define HCSR04_INVALID_RESULT -1;
-#define HCSR04_NO_TRIGGER -2;
-#define HCSR04_NO_ECHO -3;
+#define HCSR04_INVALID_RESULT  -1;
+#define HCSR04_NO_TRIGGER      -2;
+#define HCSR04_NO_ECHO         -3;
 
 class HCSR04Sensor {
 	public:
@@ -79,10 +79,9 @@ class HCSR04Sensor {
 		volatile unsigned long* volatile triggerTimes;
 		
 		byte echoCount;
-		volatile byte* volatile echoInts;
-		volatile byte* volatile echoStages;
-		volatile byte* volatile echoMasks;
-		volatile byte* volatile echoPorts;
+		volatile short* volatile echoStages;
+		volatile short* volatile echoInts;
+		volatile short* volatile echoPorts;
 		volatile unsigned long* volatile echoTimes;
 		
 		void triggerInterrupt(byte);
