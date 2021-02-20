@@ -9,7 +9,7 @@
 HCSR04Sensor::HCSR04Sensor() {}
 HCSR04Sensor::~HCSR04Sensor() { this->end(); }
 
-void HCSR04Sensor::begin(byte triggerPin, byte* echoPins, byte echoCount, int timeout, eUltraSonicUnlock_t unlock) {
+void HCSR04Sensor::begin(uint8_t triggerPin, uint8_t* echoPins, uint8_t echoCount, uint32_t timeout, eUltraSonicUnlock_t unlock) {
 	if (this->echoCount != echoCount) this->end();
 	
 	this->triggerPin = triggerPin;
@@ -24,15 +24,15 @@ void HCSR04Sensor::begin(byte triggerPin, byte* echoPins, byte echoCount, int ti
 	if (this->triggerTimes == NULL) this->triggerTimes = new unsigned long[echoCount];
 	if (this->echoTimes == NULL) this->echoTimes = new unsigned long[echoCount];
 
-	if (this->echoStages == NULL) this->echoStages = new short[echoCount];
-	if (this->echoInts == NULL) this->echoInts = new short[echoCount];
-	if (this->echoPorts == NULL) this->echoPorts = new short[echoCount];
+	if (this->echoStages == NULL) this->echoStages = new int16_t[echoCount];
+	if (this->echoInts == NULL) this->echoInts = new int16_t[echoCount];
+	if (this->echoPorts == NULL) this->echoPorts = new int16_t[echoCount];
 
-	for (byte i = 0; i < this->echoCount; i++) {
+	for (uint8_t i = 0; i < this->echoCount; i++) {
 		this->triggerTimes[i] = 0;
 		this->echoTimes[i] = 0;
 
-		short interrupt = digitalPinToInterrupt(echoPins[i]);
+		int16_t interrupt = digitalPinToInterrupt(echoPins[i]);
 		if (interrupt == NOT_AN_INTERRUPT) {
 			this->echoStages[i] = -1;
 			this->echoInts[i] = -1;
@@ -88,7 +88,7 @@ void HCSR04Sensor::measureMicroseconds(long* results) {
 	digitalWrite(triggerPin, LOW);
 	
 	// Attach interrupts to echo pins for the starting point
-	for (byte i = 0; i < this->echoCount; i++) {
+	for (uint8_t i = 0; i < this->echoCount; i++) {
 		if (this->echoInts[i] >= 0 && this->echoStages[i] == 0) {
 			this->echoStages[i] = 1;
 			switch (i) {
@@ -115,7 +115,7 @@ void HCSR04Sensor::measureMicroseconds(long* results) {
 		currentMicros = micros();
 		elapsedMicros = currentMicros - startMicros;
 
-		for (byte i = 0; i < this->echoCount; i++) {
+		for (uint8_t i = 0; i < this->echoCount; i++) {
 			waiting &= elapsedMicros < this->timeout || (this->triggerTimes[i] > 0 && this->echoTimes[i] == 0 && (currentMicros - this->triggerTimes[i]) < this->timeout);
 
 			if (this->echoPorts[i] >= 0 && this->triggerTimes[i] == 0) {
@@ -161,7 +161,7 @@ void HCSR04Sensor::measureMicroseconds(long* results) {
 	}
 	
 	// Determine the durations of each sensor.
-	for (byte i = 0; i < this->echoCount; i++) {
+	for (uint8_t i = 0; i < this->echoCount; i++) {
 		if (this->echoInts[i] >= 0) this->echoStages[i] = 0;
 		if (this->triggerTimes[i] > 0 && this->echoTimes[i] > 0) {
 			long resultTime = this->echoTimes[i] - this->triggerTimes[i];
@@ -184,7 +184,7 @@ void HCSR04Sensor::measureDistanceMm(float temperature, double* results) {
 	long* times = measureMicroseconds();
 	
 	// Calculate the distance in mm for each result.
-	for (byte i = 0; i < this->echoCount; i++) {
+	for (uint8_t i = 0; i < this->echoCount; i++) {
 		double distanceMm = times[i] / 2.0 * speedOfSoundInMmPerMs;
 		if (distanceMm < 10 || distanceMm > 4000) {
 			results[i] = HCSR04_INVALID_RESULT;
@@ -201,7 +201,7 @@ void HCSR04Sensor::measureDistanceCm(float temperature, double* results) {
 	long* times = measureMicroseconds();
 	
 	// Calculate the distance in cm for each result.
-	for (byte i = 0; i < this->echoCount; i++) {
+	for (uint8_t i = 0; i < this->echoCount; i++) {
 		double distanceCm = times[i] / 2.0 * speedOfSoundInCmPerMs;
 		if (distanceCm < 1 || distanceCm > 400) {
 			results[i] = HCSR04_INVALID_RESULT;
@@ -218,7 +218,7 @@ void HCSR04Sensor::measureDistanceIn(float temperature, double* results) {
 	long* times = measureMicroseconds();
 
 	// Calculate the distance in cm for each result.
-	for (byte i = 0; i < this->echoCount; i++) {
+	for (uint8_t i = 0; i < this->echoCount; i++) {
 		double distanceIn = times[i] / 2.0 * speedOfSoundInCmPerMs;
 		if (distanceIn < 1 || distanceIn > 157.4804) {
 			results[i] = HCSR04_INVALID_RESULT;
@@ -229,12 +229,12 @@ void HCSR04Sensor::measureDistanceIn(float temperature, double* results) {
 	}
 }
 
-void HCSR04Sensor::unlockSensors(eUltraSonicUnlock_t unlock, byte* echoPins) {
+void HCSR04Sensor::unlockSensors(eUltraSonicUnlock_t unlock, uint8_t* echoPins) {
 	if (unlock == eUltraSonicUnlock_t::unlockSkip) return;
 	bool hasLocked = false;
 
 	// Check if any sensor is in a locked state and unlock it if necessary.
-	for (byte i = 0; echoPins[i] != 0; i++) {
+	for (uint8_t i = 0; echoPins[i] != 0; i++) {
 		if (unlock == eUltraSonicUnlock_t::unlockMaybe && digitalRead(echoPins[i]) == LOW) continue;
 		pinMode(echoPins[i], OUTPUT);
 		digitalWrite(echoPins[i], LOW);
@@ -244,18 +244,18 @@ void HCSR04Sensor::unlockSensors(eUltraSonicUnlock_t unlock, byte* echoPins) {
 	if (hasLocked) delay(100);
 
 	// Revert the pinMode after potential unlocking.
-	for (byte i = 0; echoPins[i] != 0; i++) {
+	for (uint8_t i = 0; echoPins[i] != 0; i++) {
 		pinMode(echoPins[i], INPUT);
 	}
 	
 	if (hasLocked) delay(100);
 }
 
-void HCSR04Sensor::triggerInterrupt(byte index) {
+void HCSR04Sensor::triggerInterrupt(uint8_t index) {
 	if (this->triggerTimes[index] == 0) this->triggerTimes[index] = micros();
 }
 
-void HCSR04Sensor::echoInterrupt(byte index) {
+void HCSR04Sensor::echoInterrupt(uint8_t index) {
 	if (this->triggerTimes[index] > 0 && this->echoTimes[index] == 0) this->echoTimes[index] = micros();
 }
 

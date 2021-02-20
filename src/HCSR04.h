@@ -23,10 +23,10 @@ class HCSR04Sensor {
 			unlockForced = 2
 		} eUltraSonicUnlock_t;
 		
-		void begin(byte triggerPin, byte echoPin) { begin(triggerPin, new byte[1]{ echoPin }, 1); }
-		void begin(byte triggerPin, byte* echoPins, byte echoCount) { begin(triggerPin, echoPins, echoCount, 100000, eUltraSonicUnlock_t::unlockSkip); }
-		void begin(byte triggerPin, byte echoPin, int timeout, eUltraSonicUnlock_t unlock) { begin(triggerPin, new byte[1]{ echoPin }, 1, timeout, unlock); }
-		void begin(byte triggerPin, byte* echoPins, byte echoCount, int timeout, eUltraSonicUnlock_t unlock);
+		void begin(uint8_t triggerPin, uint8_t echoPin) { begin(triggerPin, new uint8_t[1]{ echoPin }, 1); }
+		void begin(uint8_t triggerPin, uint8_t* echoPins, uint8_t echoCount) { begin(triggerPin, echoPins, echoCount, 100000, eUltraSonicUnlock_t::unlockSkip); }
+		void begin(uint8_t triggerPin, uint8_t echoPin, uint32_t timeout, eUltraSonicUnlock_t unlock) { begin(triggerPin, new uint8_t[1]{ echoPin }, 1, timeout, unlock); }
+		void begin(uint8_t triggerPin, uint8_t* echoPins, uint8_t echoCount, uint32_t timeout, eUltraSonicUnlock_t unlock);
 		void end();
 		
 		long* measureMicroseconds() { measureMicroseconds(lastMicroseconds); return lastMicroseconds; }
@@ -74,19 +74,19 @@ class HCSR04Sensor {
 		long* lastMicroseconds;
 		double* lastDistances;
 
-		int timeout;
-		volatile byte triggerPin;
+		uint32_t timeout;
+		volatile uint8_t triggerPin;
 		volatile unsigned long* volatile triggerTimes;
 		
-		byte echoCount;
-		volatile short* volatile echoStages;
-		volatile short* volatile echoInts;
-		volatile short* volatile echoPorts;
+		uint8_t echoCount;
+		volatile int16_t* volatile echoStages;
+		volatile int16_t* volatile echoInts;
+		volatile int16_t* volatile echoPorts;
 		volatile unsigned long* volatile echoTimes;
 		
-		void triggerInterrupt(byte);
-		void echoInterrupt(byte);
-		void unlockSensors(eUltraSonicUnlock_t, byte*);
+		void triggerInterrupt(uint8_t);
+		void echoInterrupt(uint8_t);
+		void unlockSensors(eUltraSonicUnlock_t, uint8_t*);
 };
 
 extern HCSR04Sensor HCSR04;
