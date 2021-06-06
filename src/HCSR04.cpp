@@ -80,7 +80,7 @@ void HCSR04Sensor::measureMicroseconds(long* results) {
 
 	// Make sure that trigger pin is LOW.
 	digitalWrite(triggerPin, LOW);
-	delayMicroseconds(2);
+	delayMicroseconds(4);
 	
 	// Hold trigger for 10 microseconds, which is signal for sensor to measure distance.
 	digitalWrite(triggerPin, HIGH);
