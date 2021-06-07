@@ -9,13 +9,15 @@
 HCSR04Sensor::HCSR04Sensor() {}
 HCSR04Sensor::~HCSR04Sensor() { this->end(); }
 
-void HCSR04Sensor::begin(uint8_t triggerPin, uint8_t* echoPins, uint8_t echoCount, uint32_t timeout, eUltraSonicUnlock_t unlock) {
+void HCSR04Sensor::begin(uint8_t triggerPin, uint8_t* echoPins, uint8_t echoCount, uint32_t timeout, uint16_t triggerTime, uint16_t triggerWait, eUltraSonicUnlock_t unlock) {
 	if (this->echoCount != echoCount) this->end();
 	
 	this->triggerPin = triggerPin;
 	pinMode(triggerPin, OUTPUT);
 
 	this->timeout = timeout;
+	this->triggerTime = triggerTime;
+	this->triggerWait = triggerWait;
 	this->echoCount = echoCount;
 	
 	if (this->lastMicroseconds == NULL) this->lastMicroseconds = new long[echoCount];
@@ -82,10 +84,13 @@ void HCSR04Sensor::measureMicroseconds(long* results) {
 	digitalWrite(triggerPin, LOW);
 	delayMicroseconds(4);
 	
-	// Hold trigger for 10 microseconds, which is signal for sensor to measure distance.
+	// Hold trigger HIGH for 10 microseconds (default), which signals the sensor to measure distance.
 	digitalWrite(triggerPin, HIGH);
-	delayMicroseconds(11);
+	delayMicroseconds(this->triggerTime);
+
+	// Set trigger LOW again and wait to give the sensor time for sending the signal without interference
 	digitalWrite(triggerPin, LOW);
+	delayMicroseconds(this->triggerWait);
 	
 	// Attach interrupts to echo pins for the starting point
 	for (uint8_t i = 0; i < this->echoCount; i++) {

@@ -26,7 +26,8 @@ class HCSR04Sensor {
 		void begin(uint8_t triggerPin, uint8_t echoPin) { begin(triggerPin, new uint8_t[1]{ echoPin }, 1); }
 		void begin(uint8_t triggerPin, uint8_t* echoPins, uint8_t echoCount) { begin(triggerPin, echoPins, echoCount, 100000, eUltraSonicUnlock_t::unlockSkip); }
 		void begin(uint8_t triggerPin, uint8_t echoPin, uint32_t timeout, eUltraSonicUnlock_t unlock) { begin(triggerPin, new uint8_t[1]{ echoPin }, 1, timeout, unlock); }
-		void begin(uint8_t triggerPin, uint8_t* echoPins, uint8_t echoCount, uint32_t timeout, eUltraSonicUnlock_t unlock);
+		void begin(uint8_t triggerPin, uint8_t* echoPins, uint8_t echoCount, uint32_t timeout, eUltraSonicUnlock_t unlock) { begin(triggerPin, echoPins, echoCount, timeout, 10, 10, unlock); }
+		void begin(uint8_t triggerPin, uint8_t* echoPins, uint8_t echoCount, uint32_t timeout, uint16_t triggerTime, uint16_t triggerWait, eUltraSonicUnlock_t unlock);
 		void end();
 		
 		long* measureMicroseconds() { measureMicroseconds(lastMicroseconds); return lastMicroseconds; }
@@ -75,6 +76,8 @@ class HCSR04Sensor {
 		double* lastDistances;
 
 		uint32_t timeout;
+		uint16_t triggerTime = 10; // HC-SR04 needs at least 10µs trigger. Others may need longer trigger pulses.
+		uint16_t triggerWait = 10; // HC-SR04 sends its signal about 200µs. We only wait a small amount to reduce interference, but to not miss anything on slower clock speeds.
 		volatile uint8_t triggerPin;
 		volatile unsigned long* volatile triggerTimes;
 		
