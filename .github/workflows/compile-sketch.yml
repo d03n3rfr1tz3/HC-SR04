@@ -1,0 +1,69 @@
+name: Compile Sketch
+
+# The workflow will run on every push and pull request to the repository
+on:
+  workflow_dispatch:
+  # (optional) Run workflow when pushing on master/main
+  push:
+  pull_request:
+    branches: ["main"]
+  schedule:
+    - cron:  '0 0 * * *'
+
+jobs:
+  compile-sketch-for-esp32:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        fqbn:
+          - esp32:esp32:esp32
+          - esp32:esp32:esp32s3
+          - esp32:esp32:esp32c3
+
+    steps:
+      # This step makes the contents of the repository available to the workflow
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # For more information: https://github.com/arduino/compile-sketches#readme
+      - name: Compile sketch
+        uses: arduino/compile-sketches@v1
+        with:
+          fqbn: ${{ matrix.fqbn }}
+          platforms: |
+            - source-url: https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+              name: esp32:esp32
+          sketch-paths: |
+            - examples/
+          libraries: |
+            - source-path: ./src/
+              destination-name: HC-SR04
+
+  compile-sketch-for-esp8266:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        fqbn:
+          - esp8266:esp8266:generic
+          - esp8266:esp8266:esp8285
+
+    steps:
+      # This step makes the contents of the repository available to the workflow
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # For more information: https://github.com/arduino/compile-sketches#readme
+      - name: Compile sketch
+        uses: arduino/compile-sketches@v1
+        with:
+          fqbn: ${{ matrix.fqbn }}
+          platforms: |
+            - source-url: https://arduino.esp8266.com/stable/package_esp8266com_index.json
+              name: esp8266:esp8266
+          sketch-paths: |
+            - examples/
+          libraries: |
+            - source-path: ./src/
+              destination-name: HC-SR04

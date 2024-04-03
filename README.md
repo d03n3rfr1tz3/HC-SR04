@@ -1,3 +1,5 @@
+[![Compile Sketch](https://github.com/d03n3rfr1tz3/HC-SR04/actions/workflows/compile-sketch.yml/badge.svg)](https://github.com/d03n3rfr1tz3/HC-SR04/actions/workflows/compile-sketch.yml)
+
 # Arduino/ESP8266/ESP32 library for HC-SR04 ultrasonic distance sensor.
 
 This library is used for measuring distance with the HC-SR04, which is an ultrasonic sensor that measures distances from 2 to 400cm. My library features a temperature correction and can utilize one trigger pin with multiple echo pins in parallel. I based this library on two other libraries.
