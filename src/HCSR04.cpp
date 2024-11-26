@@ -182,15 +182,34 @@ void HCSR04Sensor::measureMicroseconds(long* results) {
 	}
 }
 
+void HCSR04Sensor::measureDistanceM(float temperature, double* results) {
+	if (results == NULL) results = this->lastDistances;
+
+	// Calculate the speed of sound in meters per microsecond
+	float speedOfSoundInMPerUs = (331.4 + (0.606 * temperature)) / 1000000;
+	long* times = measureMicroseconds();
+
+	// Calculate the distance in meters for each result
+	for (uint8_t i = 0; i < this->echoCount; i++) {
+		double distanceM = times[i] / 2.0 * speedOfSoundInMPerUs;
+		if (distanceM < 0.01 || distanceM > 4.0) { // Equivalent 1 cm to 400 cm
+			results[i] = HCSR04_INVALID_RESULT;
+		} else {
+			results[i] = distanceM;
+		}
+	}
+}
+
 void HCSR04Sensor::measureDistanceMm(float temperature, double* results) {
 	if (results == NULL) results = this->lastDistances;
 
-	double speedOfSoundInMmPerMs = (331.3 + 0.606 * temperature) / 1000; // Cair ≈ (331.3 + 0.606 ⋅ ϑ) m/s
+	// Calculate the speed of sound in millimeters per microsecond
+	double speedOfSoundInMmPerUs = ((331.3 + (0.606 * temperature)) * 1000) / 1000000; // Cair ≈ (331.3 + 0.606 ⋅ ϑ) m/s
 	long* times = measureMicroseconds();
 	
-	// Calculate the distance in mm for each result.
+	// Calculate the distance in millimeters for each result.
 	for (uint8_t i = 0; i < this->echoCount; i++) {
-		double distanceMm = times[i] / 2.0 * speedOfSoundInMmPerMs;
+		double distanceMm = times[i] / 2.0 * speedOfSoundInMmPerUs;
 		if (distanceMm < 10 || distanceMm > 4000) {
 			results[i] = HCSR04_INVALID_RESULT;
 		} else {
@@ -202,12 +221,13 @@ void HCSR04Sensor::measureDistanceMm(float temperature, double* results) {
 void HCSR04Sensor::measureDistanceCm(float temperature, double* results) {
 	if (results == NULL) results = this->lastDistances;
 
-	double speedOfSoundInCmPerMs = (331.3 + 0.606 * temperature) / 1000 / 10; // Cair ≈ (331.3 + 0.606 ⋅ ϑ) m/s
+	// Calculate the speed of sound in centimeters per microsecond
+	double speedOfSoundInCmPerUs = ((331.3 + (0.606 * temperature)) * 100) / 1000000; // Cair ≈ (331.3 + 0.606 ⋅ ϑ) m/s
 	long* times = measureMicroseconds();
 	
-	// Calculate the distance in cm for each result.
+	// Calculate the distance in centimeters for each result.
 	for (uint8_t i = 0; i < this->echoCount; i++) {
-		double distanceCm = times[i] / 2.0 * speedOfSoundInCmPerMs;
+		double distanceCm = times[i] / 2.0 * speedOfSoundInCmPerUs;
 		if (distanceCm < 1 || distanceCm > 400) {
 			results[i] = HCSR04_INVALID_RESULT;
 		} else {
@@ -219,17 +239,56 @@ void HCSR04Sensor::measureDistanceCm(float temperature, double* results) {
 void HCSR04Sensor::measureDistanceIn(float temperature, double* results) {
 	if (results == NULL) results = this->lastDistances;
 
-	double speedOfSoundInCmPerMs = (331.3 + 0.606 * temperature) * 39.37007874 / 1000 / 1000; // Cair ≈ (331.3 + 0.606 ⋅ ϑ) m/s
+	// Calculate the speed of sound in inches per microsecond
+	double speedOfSoundInInPerUs = ((331.3 + (0.606 * temperature)) * 39.37007874) / 1000000; // Cair ≈ (331.3 + 0.606 ⋅ ϑ) m/s
 	long* times = measureMicroseconds();
 
-	// Calculate the distance in cm for each result.
+	// Calculate the distance in inches for each result.
 	for (uint8_t i = 0; i < this->echoCount; i++) {
-		double distanceIn = times[i] / 2.0 * speedOfSoundInCmPerMs;
-		if (distanceIn < 1 || distanceIn > 157.4804) {
+		double distanceIn = (times[i] / 2.0) * speedOfSoundInInPerUs;
+		if (distanceIn < .3937 || distanceIn > 157.480315) {
 			results[i] = HCSR04_INVALID_RESULT;
 		}
 		else {
 			results[i] = distanceIn;
+		}
+	}
+}
+
+void HCSR04Sensor::measureDistanceFt(float temperature, double* results) {
+	if (results == NULL) results = this->lastDistances;
+
+	// Calculate the speed of sound in feet per microsecond
+	double speedOfSoundInFtPerUs = ((331.3 + (0.606 * temperature)) * 3.28084) / 1000000; // Cair ≈ (331.3 + 0.606 ⋅ ϑ) m/s
+	long* times = measureMicroseconds();
+
+	// Calculate the distance in feet for each result.
+	for (uint8_t i = 0; i < this->echoCount; i++) {
+		double distanceFt = times[i] / 2.0 * speedOfSoundInFtPerUs;
+		if (distanceFt < 0.0328084 || distanceFt > 13.12336) { // Equivalent 1 cm to 400 cm
+			results[i] = HCSR04_INVALID_RESULT;
+		}
+		else {
+			results[i] = distanceFt;
+		}
+	}
+}
+
+void HCSR04Sensor::measureDistanceYd(float temperature, double* results) {
+	if (results == NULL) results = this->lastDistances;
+
+	// Calculate the speed of sound in yards per microsecond
+	double speedOfSoundInYdPerUs = ((331.3 + (0.606 * temperature)) / .9144) / 1000000; // Cair ≈ (331.3 + 0.606 ⋅ ϑ) m/s
+	long* times = measureMicroseconds();
+
+	// Calculate the distance in yards for each result
+	for (uint8_t i = 0; i < this->echoCount; i++) {
+		double distanceYd = times[i] / 2.0 * speedOfSoundInYdPerUs;
+		if (distanceYd < 0.01093613 || distanceYd > 4.374453) { // Equivalent 1 cm to 400 cm
+			results[i] = HCSR04_INVALID_RESULT;
+		}
+		else {
+			results[i] = distanceYd;
 		}
 	}
 }

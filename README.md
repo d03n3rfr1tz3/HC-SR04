@@ -13,7 +13,7 @@ This library is used for measuring distance with the HC-SR04, which is an ultras
 
 ## Example
 
-```c
+```c++
 #include <HCSR04.h>
 
 byte triggerPin = 21;
@@ -34,6 +34,57 @@ void loop () {
     Serial.print(": ");
     Serial.print(distances[i]);
     Serial.print(" cm");
+  }
+  
+  Serial.println("");
+  delay(500);
+}
+```
+
+## Library Options
+
+You can get the distance back in several different units, using these methods:
+
+| Method                | Unit         |
+|-----------------------|--------------|
+| `measureDistanceM()`  | `Meters`     |
+| `measureDistanceMm()` | `Millimeters`|
+| `measureDistanceCm()` | `Centimeters`|
+| `measureDistanceIn()` | `Inches`     |
+| `measureDistanceFt()` | `Feet`       |
+| `measureDistanceYd()` | `Yards`      |
+
+You can optionally pass into the method, the current ambient temperature in degrees Celcius for better accuracy.
+
+### Examples
+```c++
+float tempC = 22.2222222 // 72 Degrees F
+float distance = measureDistanceCm(tempC)
+```
+
+```c++
+#include <HCSR04.h>
+
+byte triggerPin = 21;
+byte echoCount = 2;
+byte* echoPins = new byte[echoCount] { 12, 13 };
+const double tempC = 22.2222; //72 degrees F
+double* distances = new double[echoCount];
+
+void setup () {
+  Serial.begin(115200);
+  HCSR04.begin(triggerPin, echoPins, echoCount);
+}
+
+void loop () {
+  HCSR04.measureDistanceMm(tempC, distances);
+  
+  for (int i = 0; i < echoCount; i++) {
+    if (i > 0) Serial.print(" | ");
+    Serial.print(i + 1);
+    Serial.print(": ");
+    Serial.print(distances[i]);
+    Serial.print(" mm");
   }
   
   Serial.println("");
