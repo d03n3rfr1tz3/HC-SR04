@@ -33,6 +33,11 @@ class HCSR04Sensor {
 		long* measureMicroseconds() { measureMicroseconds(lastMicroseconds); return lastMicroseconds; }
 		void measureMicroseconds(long* results);
 
+		double* measureDistanceM() { measureDistanceM(defaultTemperature, lastDistances); return lastDistances; }
+		void measureDistanceM(double* results) { measureDistanceM(defaultTemperature, results == NULL ? lastDistances : results); }
+		double* measureDistanceM(float temperature) { measureDistanceM(temperature, lastDistances); return lastDistances; }
+		void measureDistanceM(float temperature, double* results);
+
 		double* measureDistanceMm() { measureDistanceMm(defaultTemperature, lastDistances); return lastDistances; }
 		void measureDistanceMm(double* results) { measureDistanceMm(defaultTemperature, results == NULL ? lastDistances : results); }
 		double* measureDistanceMm(float temperature) { measureDistanceMm(temperature, lastDistances); return lastDistances; }
@@ -48,6 +53,16 @@ class HCSR04Sensor {
 		double* measureDistanceIn(float temperature) { measureDistanceIn(temperature, lastDistances); return lastDistances; }
 		void measureDistanceIn(float temperature, double* results);
 		
+		double* measureDistanceFt() { measureDistanceFt(defaultTemperature, lastDistances); return lastDistances; }
+		void measureDistanceFt(double* results) { measureDistanceFt(defaultTemperature, results == NULL ? lastDistances : results); }
+		double* measureDistanceFt(float temperature) { measureDistanceFt(temperature, lastDistances); return lastDistances; }
+		void measureDistanceFt(float temperature, double* results);
+
+		double* measureDistanceYd() { measureDistanceYd(defaultTemperature, lastDistances); return lastDistances; }
+		void measureDistanceYd(double* results) { measureDistanceYd(defaultTemperature, results == NULL ? lastDistances : results); }
+		double* measureDistanceYd(float temperature) { measureDistanceYd(temperature, lastDistances); return lastDistances; }
+		void measureDistanceYd(float temperature, double* results);
+
 		static void triggerInterrupt0(void);
 		static void triggerInterrupt1(void);
 		static void triggerInterrupt2(void);
