@@ -1,0 +1,51 @@
+name: Native Tests
+
+on:
+  workflow_dispatch:
+  push:
+  pull_request:
+    branches: ["main", "master"]
+
+jobs:
+  unit-tests:
+    name: Unit tests (g++ / ASan + UBSan)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Build and run tests
+        run: |
+          g++ -std=c++11 -Wall -Wextra -Werror \
+              -fsanitize=address,undefined -g \
+              -Itest \
+              test/Arduino.cpp test/test_hcsr04.cpp src/HCSR04.cpp \
+              -o hcsr04_test
+          ./hcsr04_test
+
+  static-analysis:
+    name: Static analysis (cppcheck)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Install cppcheck
+        run: sudo apt-get update && sudo apt-get install -y cppcheck
+
+      - name: Run cppcheck (fail on real issues)
+        run: |
+          cppcheck --enable=warning,performance,portability \
+                   --inline-suppr --error-exitcode=1 \
+                   --suppress=missingIncludeSystem \
+                   --std=c++11 \
+                   src/
+
+      - name: Run cppcheck (style, informational)
+        continue-on-error: true
+        run: |
+          cppcheck --enable=style \
+                   --inline-suppr \
+                   --suppress=missingIncludeSystem \
+                   --std=c++11 \
+                   src/
