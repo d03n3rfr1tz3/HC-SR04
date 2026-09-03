@@ -8,9 +8,9 @@
 
 #include "Arduino.h"
 
-#define HCSR04_INVALID_RESULT  -1;
-#define HCSR04_NO_TRIGGER      -2;
-#define HCSR04_NO_ECHO         -3;
+#define HCSR04_INVALID_RESULT  (-1)
+#define HCSR04_NO_TRIGGER      (-2)
+#define HCSR04_NO_ECHO         (-3)
 
 class HCSR04Sensor {
 	public:
@@ -23,9 +23,9 @@ class HCSR04Sensor {
 			unlockForced = 2
 		} eUltraSonicUnlock_t;
 		
-		void begin(uint8_t triggerPin, uint8_t echoPin) { begin(triggerPin, new uint8_t[1]{ echoPin }, 1); }
+		void begin(uint8_t triggerPin, uint8_t echoPin) { uint8_t echoPins[1] = { echoPin }; begin(triggerPin, echoPins, 1); }
 		void begin(uint8_t triggerPin, uint8_t* echoPins, uint8_t echoCount) { begin(triggerPin, echoPins, echoCount, 100000, eUltraSonicUnlock_t::unlockSkip); }
-		void begin(uint8_t triggerPin, uint8_t echoPin, uint32_t timeout, eUltraSonicUnlock_t unlock) { begin(triggerPin, new uint8_t[1]{ echoPin }, 1, timeout, unlock); }
+		void begin(uint8_t triggerPin, uint8_t echoPin, uint32_t timeout, eUltraSonicUnlock_t unlock) { uint8_t echoPins[1] = { echoPin }; begin(triggerPin, echoPins, 1, timeout, unlock); }
 		void begin(uint8_t triggerPin, uint8_t* echoPins, uint8_t echoCount, uint32_t timeout, eUltraSonicUnlock_t unlock) { begin(triggerPin, echoPins, echoCount, timeout, 10, 10, unlock); }
 		void begin(uint8_t triggerPin, uint8_t* echoPins, uint8_t echoCount, uint32_t timeout, uint16_t triggerTime, uint16_t triggerWait, eUltraSonicUnlock_t unlock);
 		void end();
@@ -87,20 +87,20 @@ class HCSR04Sensor {
 	
 	private:
 		float defaultTemperature = 19.307;
-		long* lastMicroseconds;
-		double* lastDistances;
+		long* lastMicroseconds = NULL;
+		double* lastDistances = NULL;
 
-		uint32_t timeout;
+		uint32_t timeout = 100000;
 		uint16_t triggerTime = 10; // HC-SR04 needs at least 10µs trigger. Others may need longer trigger pulses.
 		uint16_t triggerWait = 10; // HC-SR04 sends its signal about 200µs. We only wait a small amount to reduce interference, but to not miss anything on slower clock speeds.
-		volatile uint8_t triggerPin;
-		volatile unsigned long* volatile triggerTimes;
+		volatile uint8_t triggerPin = 0;
+		volatile unsigned long* volatile triggerTimes = NULL;
 		
-		uint8_t echoCount;
-		volatile int16_t* volatile echoStages;
-		volatile int16_t* volatile echoInts;
-		volatile int16_t* volatile echoPorts;
-		volatile unsigned long* volatile echoTimes;
+		uint8_t echoCount = 0;
+		volatile int16_t* volatile echoStages = NULL;
+		volatile int16_t* volatile echoInts = NULL;
+		volatile int16_t* volatile echoPorts = NULL;
+		volatile unsigned long* volatile echoTimes = NULL;
 		
 		void triggerInterrupt(uint8_t);
 		void echoInterrupt(uint8_t);

@@ -186,7 +186,7 @@ void HCSR04Sensor::measureDistanceM(float temperature, double* results) {
 	if (results == NULL) results = this->lastDistances;
 
 	// Calculate the speed of sound in meters per microsecond
-	float speedOfSoundInMPerUs = (331.4 + (0.606 * temperature)) / 1000000;
+	double speedOfSoundInMPerUs = (331.3 + (0.606 * temperature)) / 1000000; // Cair ≈ (331.3 + 0.606 ⋅ ϑ) m/s
 	long* times = measureMicroseconds();
 
 	// Calculate the distance in meters for each result
@@ -298,7 +298,7 @@ void HCSR04Sensor::unlockSensors(eUltraSonicUnlock_t unlock, uint8_t* echoPins) 
 	bool hasLocked = false;
 
 	// Check if any sensor is in a locked state and unlock it if necessary.
-	for (uint8_t i = 0; echoPins[i] != 0; i++) {
+	for (uint8_t i = 0; i < this->echoCount; i++) {
 		if (unlock == eUltraSonicUnlock_t::unlockMaybe && digitalRead(echoPins[i]) == LOW) continue;
 		pinMode(echoPins[i], OUTPUT);
 		digitalWrite(echoPins[i], LOW);
@@ -308,7 +308,7 @@ void HCSR04Sensor::unlockSensors(eUltraSonicUnlock_t unlock, uint8_t* echoPins) 
 	if (hasLocked) delay(100);
 
 	// Revert the pinMode after potential unlocking.
-	for (uint8_t i = 0; echoPins[i] != 0; i++) {
+	for (uint8_t i = 0; i < this->echoCount; i++) {
 		pinMode(echoPins[i], INPUT);
 	}
 	
