@@ -6,7 +6,7 @@ on:
   # (optional) Run workflow when pushing on master/main
   push:
   pull_request:
-    branches: ["main"]
+    branches: ["main", "master"]
   schedule:
     - cron:  '0 0 1 * *'
 
@@ -62,6 +62,31 @@ jobs:
           platforms: |
             - source-url: https://arduino.esp8266.com/stable/package_esp8266com_index.json
               name: esp8266:esp8266
+          sketch-paths: |
+            - examples/
+          libraries: |
+            - source-path: ./src/
+              destination-name: HC-SR04
+
+  compile-sketch-for-avr:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        fqbn:
+          - arduino:avr:uno
+          - arduino:avr:mega
+
+    steps:
+      # This step makes the contents of the repository available to the workflow
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # For more information: https://github.com/arduino/compile-sketches#readme
+      - name: Compile sketch
+        uses: arduino/compile-sketches@v1
+        with:
+          fqbn: ${{ matrix.fqbn }}
           sketch-paths: |
             - examples/
           libraries: |
