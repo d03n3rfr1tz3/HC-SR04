@@ -1,17 +1,9 @@
 /*
   Host-side unit tests for the HC-SR04 library.
 
-  These run on a normal PC (no hardware) against the mock Arduino.h in this folder.
-  They cover the parts that are deterministic and worth guarding against regressions:
-    - the microsecond -> distance math and unit conversions
-    - cross-unit consistency (e.g. meters * 100 == centimeters)
-    - the error sentinels for "no trigger" / out-of-range
-    - the interrupt path, including an echo line that is still busy when the
-      interrupt is armed
-    - a bounds regression guard for unlockSensors()
-
-  Real timing accuracy still needs hardware; that is out of scope here by design.
-  What the mock does reproduce faithfully is the edge/level *logic* of both paths.
+  They run on a normal PC against the mock Arduino.h in this folder and cover the
+  deterministic behaviour of both measurement paths. Real timing accuracy needs
+  hardware and is out of scope here.
 */
 
 #include <cstdio>
@@ -49,11 +41,9 @@ static const uint8_t TRIGGER = 5;
 static const uint8_t ECHO    = 12;
 
 // Drive one measurement for a scripted echo of the given round-trip width.
-// Returns the measured distance via the supplied member function pointer.
 static double measureWithPulse(MeasureFn fn, unsigned long widthUs, float tempC) {
 	hcsr04_mock::reset();
-	// The library emits a ~24us trigger pulse before listening; start the echo
-	// comfortably after that so the rising edge is seen cleanly.
+	// The library emits a ~24us trigger pulse before it listens, so the echo starts later.
 	hcsr04_mock::schedulePulse(ECHO, 100, widthUs);
 
 	HCSR04.begin(TRIGGER, ECHO);
@@ -63,13 +53,14 @@ static double measureWithPulse(MeasureFn fn, unsigned long widthUs, float tempC)
 	return out;
 }
 
-// Drive one measurement over the interrupt path with a fully scripted waveform.
-static long measureUsWithEdges(int startLevel, const unsigned long* edges, int edgeCount) {
+// Drive one measurement with a scripted waveform over the interrupt or the polled path.
+static long measureUsWithEdges(bool useInterrupt, int startLevel, const unsigned long* edges,
+                               int edgeCount, uint32_t timeout = 100000) {
 	hcsr04_mock::reset();
-	hcsr04_mock::interruptCapable = true;
+	hcsr04_mock::interruptCapable = useInterrupt;
 	hcsr04_mock::scheduleEdges(ECHO, startLevel, edges, edgeCount);
 
-	HCSR04.begin(TRIGGER, ECHO);
+	HCSR04.begin(TRIGGER, ECHO, timeout, HCSR04Sensor::unlockSkip);
 
 	long us = 0;
 	HCSR04.measureMicroseconds(&us);
@@ -82,10 +73,10 @@ int main() {
 
 	printf("Distance math\n");
 	{
-		// 100 cm target => round-trip time = 2 * distance / speed.
+		// A 100 cm target means a round-trip time of 2 * distance / speed.
 		unsigned long width = (unsigned long) std::lround(2.0 * 100.0 / speed);
 		double cm = measureWithPulse(&HCSR04Sensor::measureDistanceCm, width, T);
-		// Loop granularity is ~1us, i.e. well under 0.1 cm; allow 0.5 cm slack.
+		// Loop granularity is about 1us, so 0.5 cm slack is plenty.
 		checkNear(cm, 100.0, 0.5, "measureDistanceCm ~100 cm");
 	}
 	{
@@ -94,22 +85,20 @@ int main() {
 		checkNear(cm, 10.0, 0.3, "measureDistanceCm ~10 cm");
 	}
 
-	printf("Unit consistency (regression guard for the 331.3 vs 331.4 fix)\n");
+	printf("Unit consistency\n");
 	{
+		// The same scripted pulse has to convert to matching values in every unit.
 		unsigned long width = (unsigned long) std::lround(2.0 * 50.0 / speed);
 		double m  = measureWithPulse(&HCSR04Sensor::measureDistanceM,  width, T);
 		double cm = measureWithPulse(&HCSR04Sensor::measureDistanceCm, width, T);
 		double mm = measureWithPulse(&HCSR04Sensor::measureDistanceMm, width, T);
-		// Same scripted pulse => identical duration => units must line up exactly
-		// (they only do if M and Cm share the same speed-of-sound constant).
 		checkNear(m * 100.0, cm, 1e-6, "meters * 100 == centimeters");
 		checkNear(cm * 10.0, mm, 1e-6, "centimeters * 10 == millimeters");
 	}
 
 	printf("Error sentinels\n");
 	{
-		// No pulse at all => the sensor never sees an echo start => NO_TRIGGER (-2),
-		// which the distance layer collapses to the invalid sentinel (< 0).
+		// Without any pulse the sensor never sees an echo start and reports NO_TRIGGER.
 		hcsr04_mock::reset();
 		hcsr04_mock::schedulePulse(ECHO, 0, 0); // no pulse
 		HCSR04.begin(TRIGGER, ECHO, 2000 /* short timeout us */, HCSR04Sensor::unlockSkip);
@@ -121,51 +110,87 @@ int main() {
 		hcsr04_mock::reset();
 		HCSR04.measureDistanceCm(&cm);
 		check(cm < 0.0, "measureDistanceCm returns invalid (< 0) when no echo");
+		check(cm == HCSR04_NO_TRIGGER, "measureDistanceCm keeps the NO_TRIGGER sentinel");
+	}
+	{
+		// The echo starts but never ends, which has to stay distinguishable from NO_TRIGGER.
+		unsigned long risesOnly[1] = { 450 };
+		hcsr04_mock::reset();
+		hcsr04_mock::interruptCapable = true;
+		hcsr04_mock::scheduleEdges(ECHO, LOW, risesOnly, 1);
+		HCSR04.begin(TRIGGER, ECHO, 2000, HCSR04Sensor::unlockSkip);
+
+		double cm = 0.0;
+		HCSR04.measureDistanceCm(&cm);
+		check(cm == HCSR04_NO_ECHO, "measureDistanceCm keeps the NO_ECHO sentinel");
 	}
 
 	printf("Interrupt path\n");
 	{
-		// Healthy sensor: line idle LOW, echo rises at 450us.
+		// Healthy sensor with an idle LOW line and an echo rising at 450us.
 		unsigned long width = (unsigned long) std::lround(2.0 * 100.0 / speed);
 		unsigned long edges[2] = { 450, 450 + width };
-		long us = measureUsWithEdges(LOW, edges, 2);
+		long us = measureUsWithEdges(true, LOW, edges, 2);
 		checkNear(us / 2.0 * speed, 100.0, 0.5, "interrupt echo ~100 cm");
 	}
 	{
-		// A close object produces a very short echo (~116us at 2 cm).
-		// Note this does NOT reproduce the attach/detach race of the real
-		// implementation: attaching and detaching are instantaneous against the
-		// virtual clock, so no edge can slip through the gap here. Only real
-		// hardware can show that. What this does cover is that a short echo is
-		// measured correctly end to end.
+		// A close object produces a very short echo of about 116us at 2 cm.
 		unsigned long width = (unsigned long) std::lround(2.0 * 2.0 / speed);
 		unsigned long edges[2] = { 450, 450 + width };
-		long us = measureUsWithEdges(LOW, edges, 2);
+		long us = measureUsWithEdges(true, LOW, edges, 2);
 		checkNear(us / 2.0 * speed, 2.0, 0.3, "interrupt echo ~2 cm (short pulse)");
 	}
+
+	printf("Busy echo line at start of measurement (both paths)\n");
 	{
-		// The echo line is still HIGH from a previous cycle when the interrupt is
-		// armed and only drops at 300us; the echo for *this* measurement runs
-		// 450 .. 450+width. The RISING handler correctly ignores that first falling
-		// edge and latches on the real rising edge.
-		//
-		// Keep this guard when the single-CHANGE-interrupt rework lands: a handler
-		// that merely counts edges takes the falling edge at 300us for the start of
-		// the measurement and reports a plausible looking ~2.5 cm instead of 100 cm.
+		// The line still carries the echo of the previous cycle and drops at 300us.
+		// Taking that stale HIGH as a start would report a plausible near value instead
+		// of the real 100 cm echo between 450us and 450+width.
 		unsigned long width = (unsigned long) std::lround(2.0 * 100.0 / speed);
 		unsigned long edges[3] = { 300, 450, 450 + width };
-		long us = measureUsWithEdges(HIGH, edges, 3);
-		checkNear(us / 2.0 * speed, 100.0, 0.5, "busy echo line at arm time does not fake a near object");
+
+		long usInt = measureUsWithEdges(true, HIGH, edges, 3);
+		checkNear(usInt / 2.0 * speed, 100.0, 0.5, "interrupt path: busy line does not fake a near object");
+
+		long usPolled = measureUsWithEdges(false, HIGH, edges, 3);
+		checkNear(usPolled / 2.0 * speed, 100.0, 0.5, "polled path: busy line does not fake a near object");
+	}
+	{
+		// The line is stuck HIGH without any edge, so both paths have to run into the
+		// timeout instead of inventing a duration from the stale level.
+		long usInt = measureUsWithEdges(true, HIGH, NULL, 0, 2000);
+		check(usInt == HCSR04_NO_TRIGGER, "interrupt path: line stuck HIGH reports NO_TRIGGER");
+
+		long usPolled = measureUsWithEdges(false, HIGH, NULL, 0, 2000);
+		check(usPolled == HCSR04_NO_TRIGGER, "polled path: line stuck HIGH reports NO_TRIGGER");
+	}
+
+	printf("Interrupt cleanup\n");
+	{
+		// The first sensor sees a rising edge that never falls and stays inside its own
+		// timeout window, while the second one makes the wait loop give up. A handler
+		// surviving that would write into the timings of the next measurement.
+		const uint8_t ECHO_B = 13;
+		uint8_t echoPins[2] = { ECHO, ECHO_B };
+		unsigned long risesOnly[1] = { 450 };
+
+		hcsr04_mock::reset();
+		hcsr04_mock::interruptCapable = true;
+		hcsr04_mock::scheduleEdges(ECHO, LOW, risesOnly, 1); // rises, never falls
+		hcsr04_mock::scheduleEdges(ECHO_B, LOW, NULL, 0);    // stays LOW throughout
+
+		HCSR04.begin(TRIGGER, echoPins, 2, 2000, HCSR04Sensor::unlockSkip);
+		long us[2] = { 0, 0 };
+		HCSR04.measureMicroseconds(us);
+
+		check(hcsr04_mock::lines[ECHO].isr == NULL && hcsr04_mock::lines[ECHO_B].isr == NULL,
+		      "no interrupt handler stays attached after a measurement");
 	}
 
 	printf("Bounds guard: unlockSensors stays inside echoPins\n");
 	{
-		// With unlockForced the unlock loop runs. The old code walked echoPins as if
-		// it were null-terminated and read past the end, driving whatever pin numbers
-		// happened to follow in memory. The trailing bytes here are deliberately
-		// non-zero so that misbehaviour is caught even without a sanitizer; under
-		// -fsanitize=address the pre-fix version additionally trips a
-		// heap-buffer-overflow on this allocation.
+		// With unlockForced the unlock loop runs. The trailing bytes are deliberately
+		// non-zero, so reading past the end would drive pins outside the configured set.
 		uint8_t* echoPins = new uint8_t[8]{ 12, 13, 7, 4, 22, 9, 3, 6 };
 
 		hcsr04_mock::reset();
@@ -174,6 +199,39 @@ int main() {
 		const uint8_t allowed[3] = { TRIGGER, 12, 13 };
 		check(hcsr04_mock::onlyTouched(allowed, 3), "begin() with unlockForced touches only the configured pins");
 		delete[] echoPins;
+	}
+
+	printf("Hard limit on the number of sensors\n");
+	{
+		// Two echo pins more than the library supports. They are dropped in begin(),
+		// so the measurement never writes a result for them.
+		uint8_t echoPins[12] = { 2, 3, 4, 6, 7, 8, 9, 10, 11, 13, 14, 15 };
+
+		hcsr04_mock::reset();
+		hcsr04_mock::interruptCapable = true;
+		HCSR04.begin(TRIGGER, echoPins, 12, 2000, HCSR04Sensor::unlockSkip);
+
+		long us[12];
+		for (int i = 0; i < 12; i++) us[i] = 1234;
+		HCSR04.measureMicroseconds(us);
+
+		check(us[HCSR04_MAX_SENSORS] == 1234 && us[11] == 1234,
+		      "begin() caps the sensor count at HCSR04_MAX_SENSORS");
+
+		const uint8_t allowed[11] = { TRIGGER, 2, 3, 4, 6, 7, 8, 9, 10, 11, 13 };
+		check(hcsr04_mock::onlyTouched(allowed, 11), "begin() leaves the pins beyond the cap alone");
+	}
+
+	// Has to stay last, because HCSR04 is a singleton and this releases its buffers.
+	printf("end() releases the sensors\n");
+	{
+		hcsr04_mock::reset();
+		HCSR04.begin(TRIGGER, ECHO);
+		HCSR04.end();
+
+		double cm = 42.0;
+		HCSR04.measureDistanceCm(&cm);
+		check(cm == 42.0, "measureDistanceCm after end() returns without touching the result");
 	}
 
 	printf("\n%d checks, %d failure(s)\n", checks, failures);

@@ -8,6 +8,13 @@
 
 #include "Arduino.h"
 
+#if defined(ESP8266) || defined(ESP32)
+	#define HCSR04_ISR_ATTR IRAM_ATTR
+#else
+	#define HCSR04_ISR_ATTR
+#endif
+
+#define HCSR04_MAX_SENSORS     10
 #define HCSR04_INVALID_RESULT  (-1)
 #define HCSR04_NO_TRIGGER      (-2)
 #define HCSR04_NO_ECHO         (-3)
@@ -74,16 +81,16 @@ class HCSR04Sensor {
 		static void triggerInterrupt8(void);
 		static void triggerInterrupt9(void);
 		
-		static void echoInterrupt0(void);
-		static void echoInterrupt1(void);
-		static void echoInterrupt2(void);
-		static void echoInterrupt3(void);
-		static void echoInterrupt4(void);
-		static void echoInterrupt5(void);
-		static void echoInterrupt6(void);
-		static void echoInterrupt7(void);
-		static void echoInterrupt8(void);
-		static void echoInterrupt9(void);
+		static void HCSR04_ISR_ATTR echoInterrupt0(void);
+		static void HCSR04_ISR_ATTR echoInterrupt1(void);
+		static void HCSR04_ISR_ATTR echoInterrupt2(void);
+		static void HCSR04_ISR_ATTR echoInterrupt3(void);
+		static void HCSR04_ISR_ATTR echoInterrupt4(void);
+		static void HCSR04_ISR_ATTR echoInterrupt5(void);
+		static void HCSR04_ISR_ATTR echoInterrupt6(void);
+		static void HCSR04_ISR_ATTR echoInterrupt7(void);
+		static void HCSR04_ISR_ATTR echoInterrupt8(void);
+		static void HCSR04_ISR_ATTR echoInterrupt9(void);
 	
 	private:
 		float defaultTemperature = 19.307;
@@ -103,7 +110,7 @@ class HCSR04Sensor {
 		volatile unsigned long* volatile echoTimes = NULL;
 		
 		void triggerInterrupt(uint8_t);
-		void echoInterrupt(uint8_t);
+		void HCSR04_ISR_ATTR echoInterrupt(uint8_t);
 		void unlockSensors(eUltraSonicUnlock_t, uint8_t*);
 };
 
