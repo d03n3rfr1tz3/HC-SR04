@@ -1,4 +1,4 @@
-[![Compile Sketch](https://github.com/d03n3rfr1tz3/HC-SR04/actions/workflows/compile-sketch.yml/badge.svg)](https://github.com/d03n3rfr1tz3/HC-SR04/actions/workflows/compile-sketch.yml)
+[![Compile Sketch](https://github.com/d03n3rfr1tz3/HC-SR04/actions/workflows/compile-sketch.yml/badge.svg)](https://github.com/d03n3rfr1tz3/HC-SR04/actions/workflows/compile-sketch.yml) [![Native Tests](https://github.com/d03n3rfr1tz3/HC-SR04/actions/workflows/native-test.yml/badge.svg)](https://github.com/d03n3rfr1tz3/HC-SR04/actions/workflows/native-test.yml)
 
 # Arduino/ESP8266/ESP32 library for HC-SR04 ultrasonic distance sensor.
 
@@ -9,6 +9,51 @@ This library is used for measuring distance with the HC-SR04, which is an ultras
 ![HC-SR04](/HC-SR04.png)
 
 ## Usage
+
+The library ships a ready-made instance called `HCSR04`, so you do not create an object yourself. Call `begin()` once in `setup()` and then call one of the measure methods whenever you want a reading.
+
+```c++
+HCSR04.begin(triggerPin, echoPins, echoCount);
+```
+
+The full form of `begin()` takes four more arguments, all of which have a default.
+
+| Argument      | Default      | Meaning |
+|---------------|--------------|---------|
+| `timeout`     | `100000`     | How long to wait for an echo, in microseconds. |
+| `triggerTime` | `10`         | Length of the trigger pulse in microseconds. Some sensors need a longer one. |
+| `triggerWait` | `10`         | Pause after the trigger pulse in microseconds, so the pulse stays out of the measurement. |
+| `unlock`      | `unlockSkip` | What to do about a sensor that holds its echo line, see below. |
+
+Echo pins that the board can use as an interrupt are measured with an interrupt handler, all other pins are polled. The library picks the path per pin, there is nothing to configure. It supports up to `HCSR04_MAX_SENSORS` echo pins, currently ten, because it provides one interrupt handler per sensor. Further pins passed to `begin()` are ignored.
+
+Every measure method comes in two shapes. Without an output array it returns a pointer to a buffer inside the library, which is valid until the next measurement. With an output array it writes the results there and the array stays yours.
+
+### Error values
+
+A measurement that has nothing to report writes a negative value. The three cases stay distinguishable all the way through the distance methods, and a check for `< 0` catches all of them.
+
+| Constant                | Value | Meaning |
+|-------------------------|-------|---------|
+| `HCSR04_INVALID_RESULT` | `-1`  | A duration was measured, but the distance lies outside the supported range. |
+| `HCSR04_NO_TRIGGER`     | `-2`  | The echo line never went HIGH. Usually bad wiring or a sensor without power. |
+| `HCSR04_NO_ECHO`        | `-3`  | The echo started but did not end before the timeout. Usually nothing in range. |
+
+### Unlocking a stuck sensor
+
+An HC-SR04 can end up holding its echo line HIGH forever, for example after a reset in the middle of a measurement. It then never reports anything again. `begin()` can pull the echo pins LOW for a moment to get the sensor out of that state.
+
+| Value          | Behaviour |
+|----------------|-----------|
+| `unlockSkip`   | Do nothing. This is the default. |
+| `unlockMaybe`  | Unlock only those pins that are HIGH at the time of the call. |
+| `unlockForced` | Always unlock every echo pin. |
+
+An unlock costs about 200 ms, so `unlockForced` makes every `begin()` that much slower.
+
+```c++
+HCSR04.begin(triggerPin, echoPins, echoCount, 100000, HCSR04Sensor::unlockMaybe);
+```
 
 
 ## Example
