@@ -138,6 +138,7 @@ void reportVerdict(unsigned long elapsedUs, float temperature) {
 void setup() {
 	Serial.begin(115200);
 	HCSR04.begin(triggerPin, echoPins, echoCount);
+	delay(50);
 
 	Serial.println();
 	Serial.println("HC-SR04 Hardwarepruefung auf dem ESP32");
