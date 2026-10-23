@@ -57,7 +57,7 @@ jobs:
               destination-name: HC-SR04
           cli-compile-flags: |
             - --output-dir
-            - test/wokwi/build
+            - ${{ github.workspace }}/test/wokwi/build
 
       # The core version belongs in the log, because a red monthly run is most
       # likely caused by a new one.
