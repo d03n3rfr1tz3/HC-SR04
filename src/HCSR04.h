@@ -109,6 +109,8 @@ class HCSR04Sensor {
 		volatile int16_t* volatile echoPorts = NULL;
 		volatile unsigned long* volatile echoTimes = NULL;
 		
+		void attachTriggerInterrupt(uint8_t);
+		void attachEchoInterrupt(uint8_t);
 		void triggerInterrupt(uint8_t);
 		void HCSR04_ISR_ATTR echoInterrupt(uint8_t);
 		void unlockSensors(eUltraSonicUnlock_t, uint8_t*);
