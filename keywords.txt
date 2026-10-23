@@ -1,4 +1,9 @@
 HCSR04	KEYWORD1
+HCSR04Sensor	KEYWORD1
+eUltraSonicUnlock_t	KEYWORD1
+
+begin	KEYWORD2
+end	KEYWORD2
 measureMicroseconds	KEYWORD2
 measureDistanceM	KEYWORD2
 measureDistanceMm	KEYWORD2
@@ -6,3 +11,11 @@ measureDistanceCm	KEYWORD2
 measureDistanceIn	KEYWORD2
 measureDistanceFt	KEYWORD2
 measureDistanceYd	KEYWORD2
+
+HCSR04_MAX_SENSORS	LITERAL1
+HCSR04_INVALID_RESULT	LITERAL1
+HCSR04_NO_TRIGGER	LITERAL1
+HCSR04_NO_ECHO	LITERAL1
+unlockSkip	LITERAL1
+unlockMaybe	LITERAL1
+unlockForced	LITERAL1
