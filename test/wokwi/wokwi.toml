@@ -1,0 +1,4 @@
+[wokwi]
+version = 1
+firmware = 'build/sensor-check.ino.bin'
+elf = 'build/sensor-check.ino.elf'

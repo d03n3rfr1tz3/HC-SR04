@@ -1,0 +1,89 @@
+name: Wokwi Test
+
+# The simulation runs on a shared monthly budget, so the workflow only runs on
+# master, on pull requests against it, once a month and on demand.
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+    branches: ["main", "master"]
+  schedule:
+    - cron:  '30 1 1 * *'
+
+# A newer push makes the running simulation pointless and it only costs budget.
+concurrency:
+  group: wokwi-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  simulate-hardware:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    # Secrets are not handed to pull requests from a fork, so skip instead of failing.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+
+    steps:
+      # This step makes the contents of the repository available to the workflow
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # The monthly run exists to catch changes outside this library, which it
+      # can only do when it resolves the core again instead of using the cache.
+      - name: Determine the cache key of the current month
+        id: month
+        run: echo "key=$(date -u +%Y-%m)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache the Arduino cores
+        uses: actions/cache@v4
+        with:
+          path: ~/.arduino15
+          key: arduino15-${{ runner.os }}-esp32-${{ steps.month.outputs.key }}
+          restore-keys: arduino15-${{ runner.os }}-esp32-
+
+      # For more information: https://github.com/arduino/compile-sketches#readme
+      - name: Compile check sketch
+        uses: arduino/compile-sketches@v1
+        with:
+          fqbn: esp32:esp32:esp32
+          platforms: |
+            - source-url: https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+              name: esp32:esp32
+          sketch-paths: |
+            - test/wokwi/sensor-check
+          libraries: |
+            - source-path: ./src/
+              destination-name: HC-SR04
+          cli-compile-flags: |
+            - --output-dir
+            - test/wokwi/build
+
+      # The core version belongs in the log, because a red monthly run is most
+      # likely caused by a new one.
+      - name: Show core version and built files
+        run: |
+          ls -1 ~/.arduino15/packages/esp32/hardware/esp32/
+          ls -la test/wokwi/build
+
+      # For more information: https://github.com/wokwi/wokwi-ci-action#readme
+      - name: Simulate three working modules
+        uses: wokwi/wokwi-ci-action@v1
+        timeout-minutes: 3
+        with:
+          token: ${{ secrets.WOKWI_CLI_TOKEN }}
+          path: test/wokwi
+          timeout: 15000
+          expect_text: 'WOKWI-CI: 1=OK 2=OK 3=OK'
+          fail_text: 'WOKWI-CI-FEHLER'
+
+      - name: Simulate a module without a trigger
+        uses: wokwi/wokwi-ci-action@v1
+        timeout-minutes: 3
+        with:
+          token: ${{ secrets.WOKWI_CLI_TOKEN }}
+          path: test/wokwi
+          diagram_file: diagram-ausfall.json
+          timeout: 15000
+          expect_text: 'WOKWI-CI: 1=OK 2=OK 3=KEIN-TRIGGER'
+          fail_text: 'WOKWI-CI-FEHLER'

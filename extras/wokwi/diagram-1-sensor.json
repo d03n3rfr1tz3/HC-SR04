@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "author": "Dirk Sarodnick",
+  "editor": "wokwi",
+  "parts": [
+    { "type": "board-esp32-devkit-c-v4", "id": "esp", "top": 0, "left": 0, "attrs": {} },
+    {
+      "type": "wokwi-hc-sr04",
+      "id": "ultrasonic1",
+      "top": -75,
+      "left": 283.9,
+      "attrs": { "distance": "100" }
+    }
+  ],
+  "connections": [
+    [ "esp:TX", "$serialMonitor:RX", "", [] ],
+    [ "esp:RX", "$serialMonitor:TX", "", [] ],
+    [ "esp:5V", "ultrasonic1:VCC", "red", [] ],
+    [ "esp:GND.2", "ultrasonic1:GND", "black", [] ],
+    [ "esp:21", "ultrasonic1:TRIG", "green", [] ],
+    [ "esp:12", "ultrasonic1:ECHO", "blue", [] ]
+  ],
+  "dependencies": {}
+}

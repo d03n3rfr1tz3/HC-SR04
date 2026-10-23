@@ -78,8 +78,6 @@ ipch/
 [Bb]in
 [Dd]ebug*/
 [Rr]elease*/
-/bots/DiskCache
-/dropbox/DiskCache
-/minecraft/DiskCache
 /.vs
 /packages/*/
+test/wokwi/build/

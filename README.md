@@ -136,3 +136,8 @@ void loop () {
   delay(500);
 }
 ```
+
+## Simulation
+
+The examples can be tried out in the browser without any hardware. The matching Wokwi
+diagrams and a short guide are in [extras/wokwi](extras/wokwi).
